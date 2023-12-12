@@ -11,7 +11,11 @@ n = 0
 
 def read_file(file_name):
     with open(file_name) as file:
+
         size = re.match(r'(?P<rows>\d+)x(?P<cols>\d+)', file.readline())
+        if size is None:
+            print("Error: The first line of the file must be in the format: <rows>x<cols>")
+            exit(1)
         m = int(size.group("rows"))
         n = int(size.group("cols"))
 
@@ -25,7 +29,12 @@ def read_file(file_name):
             chargers_vect.append(charger_coords)
 
         for line in file:
+            if line == '\n':
+                break
             ambulance_match = re.match(r'(?P<id>\d+)-T(?P<urgent>N|S)U-(?P<charger>C|X)', line)
+            if ambulance_match is None:
+                print("Error: The format of the ambulances is not correct")
+                exit(1)
             ambulance = Ambulance(ambulance_match.group("id"), ambulance_match.group("urgent"),
                                   ambulance_match.group("charger"))
             ambulance_vect.append(ambulance)
