@@ -165,6 +165,8 @@ for ambulance1 in ambulances:
                 problem.addConstraint(lambda a1, a2: a1 < a2, (ambulance1.id, ambulance2.id))
 
 solutions = problem.getSolutions()
-
+if len(solutions) == 0:
+    print("No solution found")
+    exit(1)
 write_file(parking_file_path + ".csv", list(solutions[0].items()), 5)
 
