@@ -1,5 +1,3 @@
-from typing import Tuple
-from typing import List
 import sys
 import re
 from constraint import *
@@ -23,7 +21,7 @@ def read_file(file_name):
             chargers_vect.append(charger_coords)
 
         for line in file:
-            ambulance_match = re.match(r'(?P<id>\d+)-T(?P<urgent>N|S)U-(?P<charger>C|X)',line)
+            ambulance_match = re.match(r'(?P<id>\d+)-T(?P<urgent>[NS])U-(?P<charger>[CX])',line)
             ambulance = Ambulance(ambulance_match.group("id"),ambulance_match.group("urgent"),ambulance_match.group("charger"))
             ambulance_vect.append(ambulance)
 
@@ -167,4 +165,4 @@ solution = problem.getSolutions()
 # solutions = problem.getSolutions()
 
 #write_file(parking_file_path + ".csv", list(solution.items()), 5)
-print(solution)
+print(len(solution))
