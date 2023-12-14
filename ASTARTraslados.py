@@ -1,6 +1,8 @@
 import re
+import sys
 from typing import List, Any
-
+initial_patients = 0
+heuristic_chosen = 0
 
 def read_file(filename):
     mapa = []
@@ -26,9 +28,10 @@ def read_file(filename):
 
 
 class Node:
-    def __init__(self, c_pat, n_pat, battery, row, col, cost, parent, heuristic):
+    def __init__(self, c_pat, n_pat, total_patients, battery, row, col, cost, parent, heuristic):
         self.c = c_pat
         self.n = n_pat
+        self.total_patients = total_patients
         self.battery = battery
         self.row = row
         self.col = col
@@ -36,13 +39,52 @@ class Node:
         self.parent = parent
         self.heuristic = heuristic
 
-    def create_next_node(self, val):
-        new_node = Node(val)
-        self.next = new_node
-        return new_node
 
     def __repr__(self):
-        return f"Node({self.c}, {self.n}, {self.battery}, {self.row}, {self.col}, {self.cost}, {self.parent})"
+        #This is utilized to create the hash map where we only consider the row, col, battery, c and n
+        #This is because if we want to compare two nodes their cost parent and heuristic value will be different
+        return f"Node({self.c}, {self.n}, {self.total_patients}, {self.battery}, {self.row}, {self.col})"
+
+    def __eq__(self, other):
+        return self.row == other.row and self.col == other.col and self.battery == other.battery and self.c == other.c and self.n == other.n
+
+class HashMap:
+    def __init__(self, size):
+        self.size = size
+        self.hash_map = self.hash_set()
+
+    def hash_set(self):
+        return [[] for _ in range(self.size)]
+
+    def add(self, key, value):
+        self.map[key] = value
+
+    def is_in(self, key):
+        return key in self.map
+
+#We use the hash key to find the position inside the list where our value is located
+#So for example take a node, we compute the hash, we do modulo the size to find our position for nodes of that hash value
+#Then we iterate through the list to find the node with the minimum cost
+
+    def search_hash(self, node):
+        key_to_search = hash(node) % self.size
+        corresponding_list = self.map[key_to_search]
+        for node_in_hash_set in corresponding_list:
+            if node_in_hash_set == node:
+                return True
+        return False
+
+    def add_node(self, node):
+        node_as_string = repr(node)
+        key_to_search = hash(node_as_string) % self.size
+        corresponding_list = self.hash_map[key_to_search]
+        for node_in_hash_set in corresponding_list:
+            if node_in_hash_set.cost > node.cost:
+                node_in_hash_set = node
+                return
+        self.hash_map[key_to_search].append(node)
+        return
+
 
 
 # operators are move the ambulance to the right, left, up, down, pick up a patient, drop a patient
@@ -77,42 +119,49 @@ class closed_list:
         return len(self.list) == 0
 
 
-def heurestic_value(node1, node2, patients_dictionary, number):
-    if number == 0:
-        return abs(node1.row - node2.row) + abs(node1.col - node2.col)
-    elif number == 1:
+def heurestic_value(node):
+    if heuristic_chosen == 1:
+        return node.total_patients + node.c + node.n
+    elif heuristic_chosen == 1:
         pass
 
 
 def move_right(node, map_operator, heuristic_value, patients_dictionary):
     if node.col + 1 < len(input_map[0]):
-        node_next = Node(node.c, node.n, node.battery - map_operator[node.row][node.col + 1], node.row, node.col + 1,
+        node_next = Node(node.c, node.n, node.total_patients-1, node.battery - map_operator[node.row][node.col + 1], node.row, node.col + 1,
                          node.cost, node, 0)
-        heuristic_val = heurestic_value(node_next, node, patients_dictionary, 0)
+        heuristic_val = heurestic_value(node_next, node)
         if map_operator[node.row][node.col + 1].isnumeric():
-            return Node(node.c, node.n, node.battery - map_operator[node.row][node.col + 1], node.row, node.col + 1,
+            return Node(node.c, node.n, node.total_patients-1, node.total_patients-1, node.battery - map_operator[node.row][node.col + 1], node.row, node.col + 1,
                         map_operator[node.row][node.col + 1], node, heuristic_val)
         elif map_operator[node.row][node.col + 1] != 'X':
             return None
         elif map_operator[node.row][node.col + 1] == 'N' and patients_dictionary[(node.row, node.col + 1)] == 1:
-            return Node(node.c, node.n + 1, node.battery - map_operator[node.row][node.col + 1], node.row, node.col + 1,
+            return Node(node.c, node.n + 1, node.total_patients-1, node.battery - map_operator[node.row][node.col + 1], node.row, node.col + 1,
                         node.cost + heuristic_val, node, heuristic_val)
         elif map_operator[node.row][node.col + 1] == 'C' and patients_dictionary[(node.row, node.col + 1)] == 1:
-            return Node(node.c + 1, node.n, node.battery - map_operator[node.row][node.col + 1], node.row, node.col + 1,
+            return Node(node.c + 1, node.n, node.total_patients-1, node.battery - map_operator[node.row][node.col + 1], node.row, node.col + 1,
                         node.cost + 1 + heuristic_val, node, heuristic_val)
-        elif map_operator[node.row][node.col + 1] != 'P' or map_operator[node.row][node.col + 1] == 'CC':
-            return Node(node.c, node.n, 50, node.row, node.col + 1, node.cost + 1 + heuristic_value, node, heuristic_value)
-
+        elif  map_operator[node.row][node.col + 1] == 'CC' or map_operator[node.row][node.col + 1] == 'CN':
+            return Node(node.c, node.n, node.total_patients-1, node.battery-1, node.row, node.col + 1, node.cost + 1 + heuristic_value, node, heuristic_value)
+        elif map_operator[node.row][node.col + 1] != 'P':
+            return Node(node.c,node.n,node.total_patients-1,50,node.row,node.col+1,node.cost+1+heuristic_value,node,heuristic_value)
     return None
 
 
 def a_star(map_to_search, node):
+    #Buckets is our closed list
     open_list_search = open_list(node)
+    #Hash set is our closed list
     closed_list_search = closed_list()
 
 
+
+file_to_read = sys.argv[1]
+heuristic_chosen = sys.argv[2]
 number_patients_infectious = 0
 input_map, number_patients, parking_square = read_file("locations.csv")
+initial_patients = number_patients
 print(input_map)
 initial_state = Node(0, 0, 50, parking_square[0], parking_square[1], 0, None, 0)
 final_state = Node(0, 0, 50, parking_square[0], parking_square[1], 0, None, 0)
