@@ -1,31 +1,41 @@
 import re
 import sys
 
-initial_patients = 0
 heuristic_chosen = 0
 
 
 def read_file(filename):
     mapa = []
     total_patients = 0
-    pattern = r'(\w);?'
+    patients_positions_map = []
+    pattern = r'\b\w+\b'
     row_number = 0
     # costs are the tiles of the map if it is a number it is a cost, if it is a letter it is
     with open(filename) as file:
         for line in file:
-            row_number += 1
+
             costs = re.findall(pattern, line)
             for i in range(len(costs)):
                 if costs[i].isnumeric():
                     costs[i] = int(costs[i])
                 elif costs[i] == 'N' or costs[i] == 'C':
                     total_patients += 1
+                    patients_positions_map.append([row_number, i])
                 elif costs[i] == 'P':
                     p_value = [row_number, i]
+            row_number += 1
 
             mapa.append(costs)
 
-    return mapa, total_patients, p_value
+    return mapa, patients_positions_map, p_value
+
+
+def heuristic_value(node) -> int:
+    if heuristic_chosen == 1:
+        return len(node.patients_position) + node.c + node.n
+    else:
+        print("Heuristic not chosen")
+        exit(1)
 
 
 class Bucket:
@@ -48,10 +58,6 @@ class Bucket:
         return self.size == 0
 
 
-def heuristic1(node):
-    return 0
-
-
 class Bucket_Container:
     def __init__(self):
         self.size = 10000
@@ -62,7 +68,7 @@ class Bucket_Container:
         self.min_value = 999999999  # Start with the arbitrary super large value
 
     def insert(self, node):
-        f_val = node.cost + heuristic1(node)
+        f_val = node.cost + heuristic_value(node)
 
         if f_val < 0:
             raise Exception('Negative f_value obtained')
@@ -91,7 +97,7 @@ class Bucket_Container:
 
 
 class Node:
-    def __init__(self, c_pat, n_pat, battery, row, col, cost, parent):
+    def __init__(self, c_pat, n_pat, battery, row, col, cost, parent, patients_position):
         self.c = c_pat
         self.n = n_pat
         self.battery = battery
@@ -99,11 +105,12 @@ class Node:
         self.col = col
         self.cost = cost
         self.parent = parent
+        self.patients_position = patients_position
 
     def __repr__(self):
         # This is utilized to create the hash map where we only consider the row, col, battery, c and n
         # This is because if we want to compare two nodes their cost parent and heuristic value will be different
-        return f"Node({self.c}, {self.n}, {self.battery}, {self.row}, {self.col})"
+        return f"Node({self.c}, {self.n}, {self.battery}, {self.row}, {self.col}, {self.patients_position})"
 
     def __eq__(self, other):
         return self.row == other.row and self.col == other.col and self.battery == other.battery and self.c == other.c and self.n == other.n
@@ -136,64 +143,204 @@ class HashMap:
             self.hash_map[key_to_search].append(node)
 
 
-# operators are move the ambulance to the right, left, up, down, pick up a patient, drop a patient
-
-
-class closed_list:
-    def __init__(self):
-        self.list = []
-
-    def add(self, node):
-        self.list.append(node)
-
-    def is_in(self, node):
-        return node in self.list
-
-    def is_empty(self):
-        return len(self.list) == 0
-
-
-def heurestic_value(node):
-    if heuristic_chosen == 1:
-        return node.total_patients + node.c + node.n
-    elif heuristic_chosen == 1:
-        pass
-
-
-def move_right(node, map_operator, heuristic_value, patients_dictionary):
+# operators are move the ambulance to the right, left, up, down
+def move_right(node, map_operator, patients_dictionary):
     if node.col + 1 < len(input_map[0]):
-        node_next = Node(node.c, node.n, node.total_patients - 1, node.battery - map_operator[node.row][node.col + 1],
+        node_next = Node(node.c, node.n, node.battery,
                          node.row, node.col + 1,
-                         node.cost, node, 0)
-        heuristic_val = heurestic_value(node_next, node)
-        if map_operator[node.row][node.col + 1].isnumeric():
-            return Node(node.c, node.n, node.total_patients - 1, node.total_patients - 1,
-                        node.battery - map_operator[node.row][node.col + 1], node.row, node.col + 1,
-                        map_operator[node.row][node.col + 1], node, heuristic_val)
-        elif map_operator[node.row][node.col + 1] != 'X':
+                         node.cost, node, node.patients_position)
+        heuristic_val = heuristic_value(node_next)
+
+        if map_operator[node.row][node.col + 1] == 'X':
             return None
-        elif map_operator[node.row][node.col + 1] == 'N' and patients_dictionary[(node.row, node.col + 1)] == 1:
-            return Node(node.c, node.n + 1, node.total_patients - 1,
+        # If we find a N patient we add 1 to the N patients in the van, 1 to the cost + heuristic value and remove the patient from the patients list
+        elif map_operator[node.row][node.col + 1] == 'N' and [node.row, node.col + 1] in patients_dictionary:
+            # This can be changed to list of list with index being the column of a patient
+            patients_positions_new = node.patients_position.copy()
+            for i in range(len(patients_positions_new)):
+                if patients_positions_new[i] == [node.row, node.col + 1]:
+                    patients_positions_new[i] = None
+                    break
+            return Node(node.c, node.n + 1,
+                        node.battery - 1, node.row, node.col + 1,
+                        node.cost + 1 + heuristic_val, node, patients_positions_new)
+        # Same as N patient but we add 1 to the C patients in the van
+        elif map_operator[node.row][node.col + 1] == 'C' and [node.row, node.col + 1] in patients_dictionary:
+            patients_positions_new = node.patients_position.copy()
+            for i in range(len(patients_positions_new)):
+                if patients_positions_new[i] == [node.row, node.col + 1]:
+                    patients_positions_new[i] = None
+                    break
+            return Node(node.c + 1, node.n,
+                        node.battery - 1, node.row, node.col + 1,
+                        node.cost + 1 + heuristic_val, node, patients_positions_new)
+        # Care centers +1 to cost -1 battery remove all c or n patients from van
+        elif map_operator[node.row][node.col + 1] == 'CC':
+            return Node(0, node.n, node.battery - 1, node.row, node.col + 1,
+                        node.cost + 1 + heuristic_val, node, node.patients_position)
+        elif map_operator[node.row][node.col + 1] == 'CN':
+            return Node(node.c, 0, node.battery - 1, node.row, node.col + 1,
+                        node.cost + 1 + heuristic_val, node, node.patients_position)
+        elif map_operator[node.row][node.col + 1] == 'P':
+            return Node(node.c, node.n, 50, node.row, node.col + 1,
+                        node.cost + heuristic_val, node, node.patients_position)
+        elif map_operator[node.row][node.col + 1] == int(map_operator[node.row][node.col + 1]):
+            return Node(node.c, node.n,
                         node.battery - map_operator[node.row][node.col + 1], node.row, node.col + 1,
-                        node.cost + heuristic_val, node, heuristic_val)
-        elif map_operator[node.row][node.col + 1] == 'C' and patients_dictionary[(node.row, node.col + 1)] == 1:
-            return Node(node.c + 1, node.n, node.total_patients - 1,
-                        node.battery - map_operator[node.row][node.col + 1], node.row, node.col + 1,
-                        node.cost + 1 + heuristic_val, node, heuristic_val)
-        elif map_operator[node.row][node.col + 1] == 'CC' or map_operator[node.row][node.col + 1] == 'CN':
-            return Node(node.c, node.n, node.total_patients - 1, node.battery - 1, node.row, node.col + 1,
-                        node.cost + 1 + heuristic_value, node, heuristic_value)
-        elif map_operator[node.row][node.col + 1] != 'P':
-            return Node(node.c, node.n, node.total_patients - 1, 50, node.row, node.col + 1,
-                        node.cost + 1 + heuristic_value, node, heuristic_value)
+                        node.cost + heuristic_val + map_operator[node.row][node.col + 1], node, node.patients_position)
     return None
+
+
+def move_left(node, map_operator, patients_dictionary):
+    if node.col - 1 > 0:
+        node_next = Node(node.c, node.n, node.battery,
+                         node.row, node.col - 1,
+                         node.cost, node, node.patients_position)
+        heuristic_val = heuristic_value(node_next)
+
+        if map_operator[node.row][node.col - 1] == 'X':
+            return None
+        # If we find a N patient we add 1 to the N patients in the van, 1 to the cost + heuristic value and remove the patient from the patients list
+        elif map_operator[node.row][node.col - 1] == 'N' and [node.row, node.col - 1] in patients_dictionary:
+            # This can be changed to list of list with index being the column of a patient
+            patients_positions_new = node.patients_position.copy()
+            for i in range(len(patients_positions_new)):
+                if patients_positions_new[i] == [node.row, node.col - 1]:
+                    patients_positions_new[i] = None
+                    break
+            return Node(node.c, node.n + 1,
+                        node.battery - 1, node.row, node.col - 1,
+                        node.cost + 1 + heuristic_val, node, patients_positions_new)
+        # Same as N patient but we add 1 to the C patients in the van
+        elif map_operator[node.row][node.col - 1] == 'C' and [node.row, node.col - 1] in patients_dictionary:
+            patients_positions_new = node.patients_position.copy()
+            for i in range(len(patients_positions_new)):
+                if patients_positions_new[i] == [node.row, node.col - 1]:
+                    patients_positions_new[i] = None
+                    break
+            return Node(node.c + 1, node.n,
+                        node.battery - 1, node.row, node.col - 1,
+                        node.cost + 1 + heuristic_val, node, patients_positions_new)
+        # Care centers +1 to cost -1 battery remove all c or n patients from van
+        elif map_operator[node.row][node.col - 1] == 'CC':
+            return Node(0, node.n, node.battery - 1, node.row, node.col - 1,
+                        node.cost + 1 + heuristic_val, node, node.patients_position)
+        elif map_operator[node.row][node.col - 1] == 'CN':
+            return Node(node.c, 0, node.battery - 1, node.row, node.col - 1,
+                        node.cost + 1 + heuristic_val, node, node.patients_position)
+        elif map_operator[node.row][node.col - 1] == 'P':
+            return Node(node.c, node.n, 50, node.row, node.col - 1,
+                        node.cost + heuristic_val, node, node.patients_position)
+        elif map_operator[node.row][node.col - 1] == int(map_operator[node.row][node.col - 1]):
+            return Node(node.c, node.n,
+                        node.battery - map_operator[node.row][node.col - 1], node.row, node.col - 1,
+                        node.cost + heuristic_val + map_operator[node.row][node.col - 1], node, node.patients_position)
+    return None
+
+
+def move_up(node, map_operator, patients_dictionary):
+    if node.row - 1 < 0:
+        node_next = Node(node.c, node.n, node.battery,
+                         node.row - 1, node.col,
+                         node.cost, node, node.patients_position)
+        heuristic_val = heuristic_value(node_next)
+
+        if map_operator[node.row - 1][node.col] == 'X':
+            return None
+        # If we find a N patient we add 1 to the N patients in the van, 1 to the cost + heuristic value and remove the patient from the patients list
+        elif map_operator[node.row - 1][node.col] == 'N' and [node.row - 1, node.col] in patients_dictionary:
+            # This can be changed to list of list with index being the column of a patient
+            patients_positions_new = node.patients_position.copy()
+            for i in range(len(patients_positions_new)):
+                if patients_positions_new[i] == [node.row - 1, node.col]:
+                    patients_positions_new[i] = None
+                    break
+            return Node(node.c, node.n + 1,
+                        node.battery - 1, node.row - 1, node.col,
+                        node.cost + 1 + heuristic_val, node, patients_positions_new)
+        # Same as N patient but we add 1 to the C patients in the van
+        elif map_operator[node.row - 1][node.col] == 'C' and [node.row - 1, node.col] in patients_dictionary:
+            patients_positions_new = node.patients_position.copy()
+            for i in range(len(patients_positions_new)):
+                if patients_positions_new[i] == [node.row - 1, node.col]:
+                    patients_positions_new[i] = None
+                    break
+            return Node(node.c + 1, node.n,
+                        node.battery - 1, node.row - 1, node.col,
+                        node.cost + 1 + heuristic_val, node, patients_positions_new)
+        # Care centers +1 to cost -1 battery remove all c or n patients from van
+        elif map_operator[node.row - 1][node.col] == 'CC':
+            return Node(0, node.n, node.battery - 1, node.row - 1, node.col,
+                        node.cost + 1 + heuristic_val, node, node.patients_position)
+        elif map_operator[node.row - 1][node.col] == 'CN':
+            return Node(node.c, 0, node.battery - 1, node.row - 1, node.col,
+                        node.cost + 1 + heuristic_val, node, node.patients_position)
+        elif map_operator[node.row - 1][node.col] == 'P':
+            return Node(node.c, node.n, 50, node.row - 1, node.col,
+                        node.cost + heuristic_val, node, node.patients_position)
+        elif map_operator[node.row - 1][node.col] == int(map_operator[node.row - 1][node.col]):
+            return Node(node.c, node.n,
+                        node.battery - map_operator[node.row - 1][node.col], node.row - 1, node.col,
+                        node.cost + heuristic_val + map_operator[node.row - 1][node.col], node, node.patients_position)
+    return None
+
+
+def move_down(node, map_operator, patients_dictionary):
+    if node.row + 1 < len(input_map):
+        node_next = Node(node.c, node.n, node.battery,
+                         node.row + 1, node.col,
+                         node.cost, node, node.patients_position)
+        heuristic_val = heuristic_value(node_next)
+
+        if map_operator[node.row + 1][node.col] == 'X':
+            return None
+        # If we find a N patient we add 1 to the N patients in the van, 1 to the cost + heuristic value and remove the patient from the patients list
+        elif map_operator[node.row + 1][node.col] == 'N' and [node.row + 1, node.col] in patients_dictionary:
+            # This can be changed to list of list with index being the column of a patient
+            patients_positions_new = node.patients_position.copy()
+            for i in range(len(patients_positions_new)):
+                if patients_positions_new[i] == [node.row + 1, node.col]:
+                    patients_positions_new[i] = None
+                    break
+            return Node(node.c, node.n + 1,
+                        node.battery - 1, node.row + 1, node.col,
+                        node.cost + 1 + heuristic_val, node, patients_positions_new)
+        # Same as N patient but we add 1 to the C patients in the van
+        elif map_operator[node.row + 1][node.col] == 'C' and [node.row + 1, node.col] in patients_dictionary:
+            patients_positions_new = node.patients_position.copy()
+            for i in range(len(patients_positions_new)):
+                if patients_positions_new[i] == [node.row + 1, node.col]:
+                    patients_positions_new[i] = None
+                    break
+            return Node(node.c + 1, node.n,
+                        node.battery - 1, node.row + 1, node.col,
+                        node.cost + 1 + heuristic_val, node, patients_positions_new)
+        # Care centers +1 to cost -1 battery remove all c or n patients from van
+        elif map_operator[node.row + 1][node.col] == 'CC':
+            return Node(0, node.n, node.battery - 1, node.row + 1, node.col,
+                        node.cost + 1 + heuristic_val, node, node.patients_position)
+        elif map_operator[node.row + 1][node.col] == 'CN':
+            return Node(node.c, 0, node.battery - 1, node.row + 1, node.col,
+                        node.cost + 1 + heuristic_val, node, node.patients_position)
+        elif map_operator[node.row + 1][node.col] == 'P':
+            return Node(node.c, node.n, 50, node.row + 1, node.col,
+                        node.cost + heuristic_val, node, node.patients_position)
+        elif map_operator[node.row + 1][node.col] == int(map_operator[node.row + 1][node.col]):
+            return Node(node.c, node.n,
+                        node.battery - map_operator[node.row + 1][node.col], node.row + 1, node.col,
+                        node.cost + heuristic_val + map_operator[node.row + 1][node.col], node, node.patients_position)
+    return None
+
+
+def expand_node_operators(node):
+    return [move_right(node, input_map, patients_positions), move_left(node, input_map, patients_positions),
+            move_up(node, input_map, patients_positions), move_down(node, input_map, patients_positions)]
 
 
 def a_star(map_to_search, node):
     # Buckets is our closed list
     open_list_search = Bucket_Container()
     # Hash set is our closed list
-    closed_list_search = closed_list()
 
 
 # h = HashMap(10)
@@ -213,10 +360,22 @@ def a_star(map_to_search, node):
 # c = b.extract()
 
 file_to_read = sys.argv[1]
-heuristic_chosen = sys.argv[2]
+heuristic_chosen = int(sys.argv[2])
 number_patients_infectious = 0
-input_map, number_patients, parking_square = read_file("locations.csv")
-initial_patients = number_patients
+
+input_map, patients_positions, parking_square = read_file("locations.csv")
+initial_patients = len(patients_positions)
 print(input_map)
-initial_state = Node(0, 0, 50, parking_square[0], parking_square[1], 0, None, 0)
-final_state = Node(0, 0, 50, parking_square[0], parking_square[1], 0, None, 0)
+initial_state = Node(0, 0, 50, parking_square[0], parking_square[1], 0, None, patients_positions)
+final_state = Node(0, 0, 50, parking_square[0], parking_square[1], 0, None, patients_positions)
+node_right = move_right(initial_state, input_map, patients_positions)
+node_left_of_patient = Node(0, 0, 50, 0, 7, 0, None, patients_positions)
+node_patient = move_right(node_left_of_patient, input_map, patients_positions)
+node_patient.col = 7
+node_patient.row = 3
+node_care_center_with_patient = move_right(node_patient, input_map, patients_positions)
+node_next_to_CC_with_C = Node(1, 0, 50, 3, 3, 0, None, patients_positions)
+node_care_center_with_patient_cc = move_right(node_next_to_CC_with_C, input_map, patients_positions)
+print(repr(node_patient))
+print(repr(node_care_center_with_patient))
+print(repr(node_care_center_with_patient_cc))
