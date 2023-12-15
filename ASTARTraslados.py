@@ -237,6 +237,9 @@ def a_star(open_map: HashMap, closed_map: HashMap, buckets: Bucket_Container, st
 
         open_map.remove(best_node)
 
+        #print("Battery:",best_node.battery,"Cost:",best_node.cost, "Total patients:", best_node.patients_position)
+        print(best_node)
+
         if best_node in goal_nodes:
             return best_node.path()
 
@@ -275,11 +278,11 @@ def heurestic_value(node):
 
 
 # operators are move the ambulance to the right, left, up, down
-def cell_move(node, map_operator, patients_dictionary):
+def cell_move(node, node_parent, map_operator, patients_dictionary):
 
     node_next = Node(node.c, node.n, node.battery,
                      node.row, node.col,
-                     node.cost, node, node.patients_position)
+                     node.cost, node_parent, node.patients_position)
     heuristic_val = heuristic_value(node_next)
     if map_operator[node.row][node.col] == 'X' or node.battery == 0 or node.parent.parent is not None and node.check_backtrack():
         return None
@@ -293,7 +296,7 @@ def cell_move(node, map_operator, patients_dictionary):
                 break
         return Node(node.c, node.n + 1,
                     node.battery - 1, node.row, node.col,
-                    node.cost + 1 + heuristic_val, node, patients_positions_new)
+                    node.cost + 1 + heuristic_val, node_parent, patients_positions_new)
     # Same as N patient but we add 1 to the C patients in the van
     elif map_operator[node.row][node.col] == 'C' and [node.row, node.col] in patients_dictionary and node.n <= 8 and node.c <= 2 and node.c + node.n <=10:
         patients_positions_new = node.patients_position.copy()
@@ -303,26 +306,26 @@ def cell_move(node, map_operator, patients_dictionary):
                 break
         return Node(node.c + 1, node.n,
                     node.battery - 1, node.row, node.col,
-                    node.cost + 1 + heuristic_val, node, patients_positions_new)
+                    node.cost + 1 + heuristic_val, node_parent, patients_positions_new)
     # Care centers +1 to cost -1 battery remove all c or n patients from van
     elif map_operator[node.row][node.col] == 'CC':
         return Node(0, node.n, node.battery - 1, node.row, node.col,
-                    node.cost + 1 + heuristic_val, node, node.patients_position)
+                    node.cost + 1 + heuristic_val, node_parent, node.patients_position)
     elif map_operator[node.row][node.col] == 'CN' and node.c == 0:
         return Node(node.c, 0, node.battery - 1, node.row, node.col,
-                    node.cost + 1 + heuristic_val, node, node.patients_position)
+                    node.cost + 1 + heuristic_val, node_parent, node.patients_position)
     elif map_operator[node.row][node.col] == 'P':
         return Node(node.c, node.n, 50, node.row, node.col,
-                    node.cost + heuristic_val, node, node.patients_position)
+                    node.cost + heuristic_val, node_parent, node.patients_position)
     elif isinstance(map_operator[node.row][node.col], int):
         return Node(node.c, node.n,
                     node.battery - map_operator[node.row][node.col], node.row, node.col,
-                    node.cost + heuristic_val + map_operator[node.row][node.col], node, node.patients_position)
+                    node.cost + heuristic_val + map_operator[node.row][node.col], node_parent, node.patients_position)
 
 def move_right(node, map_operator, patients_dictionary):
     if node.col + 1 < len(input_map[0]):
         node_to_expand = Node(node.c, node.n, node.battery, node.row, node.col + 1, node.cost, node, node.patients_position)
-        return cell_move(node_to_expand, map_operator, patients_dictionary)
+        return cell_move(node_to_expand, node, map_operator, patients_dictionary)
     return None
 
 
@@ -330,7 +333,7 @@ def move_left(node, map_operator, patients_dictionary):
     if node.col - 1 > 0:
         node_to_expand = Node(node.c, node.n, node.battery, node.row, node.col - 1, node.cost, node,
                                  node.patients_position)
-        return cell_move(node_to_expand, map_operator, patients_dictionary)
+        return cell_move(node_to_expand, node, map_operator, patients_dictionary)
     return None
 
 
@@ -338,7 +341,7 @@ def move_up(node, map_operator, patients_dictionary):
     if node.row - 1 > 0:
         node_to_expand = Node(node.c, node.n, node.battery, node.row - 1, node.col, node.cost, node,
                                  node.patients_position)
-        return cell_move(node_to_expand, map_operator, patients_dictionary)
+        return cell_move(node_to_expand, node, map_operator, patients_dictionary)
     return None
 
 
@@ -346,7 +349,7 @@ def move_down(node, map_operator, patients_dictionary):
     if node.row + 1 < len(input_map):
         node_to_expand = Node(node.c, node.n, node.battery, node.row + 1, node.col, node.cost, node,
                                  node.patients_position)
-        return cell_move(node_to_expand, map_operator, patients_dictionary)
+        return cell_move(node_to_expand, node, map_operator, patients_dictionary)
     return None
 
 
@@ -386,7 +389,7 @@ file_to_read = sys.argv[1]
 heuristic_chosen = int(sys.argv[2])
 number_patients_infectious = 0
 
-input_map, patients_positions, parking_square = read_file("locations.csv")
+input_map, patients_positions, parking_square = read_file(file_to_read)
 initial_patients = len(patients_positions)
 
 initial_state = Node(0, 0, 50, parking_square[0], parking_square[1], 0, None, patients_positions)
