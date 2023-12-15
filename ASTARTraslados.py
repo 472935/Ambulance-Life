@@ -158,8 +158,8 @@ class Node:
 
 
     def expand(self):
-        generated = [move_right(self, input_map, patients_positions), move_left(self, input_map, patients_positions),
-                     move_up(self, input_map, patients_positions), move_down(self, input_map, patients_positions)]
+        generated = [move_right(self, input_map), move_left(self, input_map),
+                     move_up(self, input_map), move_down(self, input_map)]
         return [i for i in generated if i is not None]
 
 
@@ -272,7 +272,7 @@ def heurestic_value(node):
 
 
 # operators are move the ambulance to the right, left, up, down
-def cell_move(node, node_parent, map_operator, patients_dictionary):
+def cell_move(node, node_parent, map_operator):
 
     node_next = Node(node.c, node.n, node.battery,
                      node.row, node.col,
@@ -280,7 +280,7 @@ def cell_move(node, node_parent, map_operator, patients_dictionary):
     if map_operator[node.row][node.col] == 'X' or node.battery == 0 or node.parent.parent is not None and node.check_backtrack():
         return None
     # If we find an N patient we add 1 to the N patients in the van, 1 to the cost + heuristic value and remove the patient from the patients list
-    elif map_operator[node.row][node.col] == 'N' and [node.row, node.col] in patients_dictionary and node.c == 0 and node.c + node.n <=10:
+    elif map_operator[node.row][node.col] == 'N' and [node.row, node.col] in node.patients_position and node.c == 0 and node.c + node.n <=10:
         # This can be changed to list of list with index being the column of a patient
         patients_positions_new = node.patients_position.copy()
         for i in range(len(patients_positions_new)):
@@ -290,8 +290,12 @@ def cell_move(node, node_parent, map_operator, patients_dictionary):
         return Node(node.c, node.n + 1,
                     node.battery - 1, node.row, node.col,
                     node.cost + 1, node_parent, patients_positions_new)
+    elif map_operator[node.row][node.col] == 'N' and [node.row, node.col] not in node.patients_position:
+        return Node(node.c, node.n,
+                    node.battery - 1, node.row, node.col,
+                    node.cost + 1, node_parent, node.patients_position)
     # Same as N patient but we add 1 to the C patients in the van
-    elif map_operator[node.row][node.col] == 'C' and [node.row, node.col] in patients_dictionary and node.n <= 8 and node.c <= 2 and node.c + node.n <=10:
+    elif map_operator[node.row][node.col] == 'C' and [node.row, node.col] in node.patients_position and node.n <= 8 and node.c <= 2 and node.c + node.n <=10:
         patients_positions_new = node.patients_position.copy()
         for i in range(len(patients_positions_new)):
             if patients_positions_new[i] == [node.row, node.col]:
@@ -300,12 +304,19 @@ def cell_move(node, node_parent, map_operator, patients_dictionary):
         return Node(node.c + 1, node.n,
                     node.battery - 1, node.row, node.col,
                     node.cost + 1, node_parent, patients_positions_new)
+    elif map_operator[node.row][node.col] == 'C' and [node.row, node.col] not in node.patients_position:
+        return Node(node.c, node.n,
+                    node.battery - 1, node.row, node.col,
+                    node.cost + 1, node_parent, node.patients_position)
     # Care centers +1 to cost -1 battery remove all c or n patients from van
     elif map_operator[node.row][node.col] == 'CC':
         return Node(0, node.n, node.battery - 1, node.row, node.col,
                     node.cost + 1, node_parent, node.patients_position)
     elif map_operator[node.row][node.col] == 'CN' and node.c == 0:
         return Node(node.c, 0, node.battery - 1, node.row, node.col,
+                    node.cost + 1, node_parent, node.patients_position)
+    elif map_operator[node.row][node.col] == 'CN':
+        return Node(node.c, node.n, node.battery - 1, node.row, node.col,
                     node.cost + 1, node_parent, node.patients_position)
     elif map_operator[node.row][node.col] == 'P':
         return Node(node.c, node.n, 50, node.row, node.col,
@@ -315,34 +326,34 @@ def cell_move(node, node_parent, map_operator, patients_dictionary):
                     node.battery - map_operator[node.row][node.col], node.row, node.col,
                     node.cost + map_operator[node.row][node.col], node_parent, node.patients_position)
 
-def move_right(node, map_operator, patients_dictionary):
+def move_right(node, map_operator):
     if node.col + 1 < len(input_map[0]):
         node_to_expand = Node(node.c, node.n, node.battery, node.row, node.col + 1, node.cost, node, node.patients_position)
-        return cell_move(node_to_expand, node, map_operator, patients_dictionary)
+        return cell_move(node_to_expand, node, map_operator)
     return None
 
 
-def move_left(node, map_operator, patients_dictionary):
+def move_left(node, map_operator):
     if node.col - 1 >= 0:
         node_to_expand = Node(node.c, node.n, node.battery, node.row, node.col - 1, node.cost, node,
                                  node.patients_position)
-        return cell_move(node_to_expand, node, map_operator, patients_dictionary)
+        return cell_move(node_to_expand, node, map_operator)
     return None
 
 
-def move_up(node, map_operator, patients_dictionary):
+def move_up(node, map_operator):
     if node.row - 1 >= 0:
         node_to_expand = Node(node.c, node.n, node.battery, node.row - 1, node.col, node.cost, node,
                                  node.patients_position)
-        return cell_move(node_to_expand, node, map_operator, patients_dictionary)
+        return cell_move(node_to_expand, node, map_operator)
     return None
 
 
-def move_down(node, map_operator, patients_dictionary):
+def move_down(node, map_operator):
     if node.row + 1 < len(input_map):
         node_to_expand = Node(node.c, node.n, node.battery, node.row + 1, node.col, node.cost, node,
                                  node.patients_position)
-        return cell_move(node_to_expand, node, map_operator, patients_dictionary)
+        return cell_move(node_to_expand, node, map_operator)
     return None
 
 
