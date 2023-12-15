@@ -30,12 +30,6 @@ def read_file(filename):
     return mapa, patients_positions_map, p_value
 
 
-def heuristic_value(node) -> int:
-    if heuristic_chosen == 1:
-        return len(node.patients_position) + node.c + node.n
-    else:
-        print("Heuristic not chosen")
-        exit(1)
 
 
 class Bucket:
@@ -273,7 +267,7 @@ def a_star(open_map: HashMap, closed_map: HashMap, buckets: Bucket_Container, st
 def heurestic_value(node):
     if heuristic_chosen == 1:
         return node.total_patients + node.c + node.n
-    elif heuristic_chosen == 1:
+    elif heuristic_chosen == 2:
         pass
 
 
@@ -283,7 +277,6 @@ def cell_move(node, node_parent, map_operator, patients_dictionary):
     node_next = Node(node.c, node.n, node.battery,
                      node.row, node.col,
                      node.cost, node_parent, node.patients_position)
-    heuristic_val = heuristic_value(node_next)
     if map_operator[node.row][node.col] == 'X' or node.battery == 0 or node.parent.parent is not None and node.check_backtrack():
         return None
     # If we find an N patient we add 1 to the N patients in the van, 1 to the cost + heuristic value and remove the patient from the patients list
@@ -296,7 +289,7 @@ def cell_move(node, node_parent, map_operator, patients_dictionary):
                 break
         return Node(node.c, node.n + 1,
                     node.battery - 1, node.row, node.col,
-                    node.cost + 1 + heuristic_val, node_parent, patients_positions_new)
+                    node.cost + 1, node_parent, patients_positions_new)
     # Same as N patient but we add 1 to the C patients in the van
     elif map_operator[node.row][node.col] == 'C' and [node.row, node.col] in patients_dictionary and node.n <= 8 and node.c <= 2 and node.c + node.n <=10:
         patients_positions_new = node.patients_position.copy()
@@ -306,21 +299,21 @@ def cell_move(node, node_parent, map_operator, patients_dictionary):
                 break
         return Node(node.c + 1, node.n,
                     node.battery - 1, node.row, node.col,
-                    node.cost + 1 + heuristic_val, node_parent, patients_positions_new)
+                    node.cost + 1, node_parent, patients_positions_new)
     # Care centers +1 to cost -1 battery remove all c or n patients from van
     elif map_operator[node.row][node.col] == 'CC':
         return Node(0, node.n, node.battery - 1, node.row, node.col,
-                    node.cost + 1 + heuristic_val, node_parent, node.patients_position)
+                    node.cost + 1, node_parent, node.patients_position)
     elif map_operator[node.row][node.col] == 'CN' and node.c == 0:
         return Node(node.c, 0, node.battery - 1, node.row, node.col,
-                    node.cost + 1 + heuristic_val, node_parent, node.patients_position)
+                    node.cost + 1, node_parent, node.patients_position)
     elif map_operator[node.row][node.col] == 'P':
         return Node(node.c, node.n, 50, node.row, node.col,
-                    node.cost + heuristic_val, node_parent, node.patients_position)
+                    node.cost + 1, node_parent, node.patients_position)
     elif isinstance(map_operator[node.row][node.col], int):
         return Node(node.c, node.n,
                     node.battery - map_operator[node.row][node.col], node.row, node.col,
-                    node.cost + heuristic_val + map_operator[node.row][node.col], node_parent, node.patients_position)
+                    node.cost + map_operator[node.row][node.col], node_parent, node.patients_position)
 
 def move_right(node, map_operator, patients_dictionary):
     if node.col + 1 < len(input_map[0]):
