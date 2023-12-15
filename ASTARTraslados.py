@@ -276,11 +276,12 @@ def heurestic_value(node):
 
 # operators are move the ambulance to the right, left, up, down
 def cell_move(node, map_operator, patients_dictionary):
+
     node_next = Node(node.c, node.n, node.battery,
                      node.row, node.col,
                      node.cost, node, node.patients_position)
     heuristic_val = heuristic_value(node_next)
-    if map_operator[node.row][node.col] == 'X' or node.battery == 0 or node.check_backtrack():
+    if map_operator[node.row][node.col] == 'X' or node.battery == 0 or node.parent.parent is not None and node.check_backtrack():
         return None
     # If we find an N patient we add 1 to the N patients in the van, 1 to the cost + heuristic value and remove the patient from the patients list
     elif map_operator[node.row][node.col] == 'N' and [node.row, node.col] in patients_dictionary and node.c == 0 and node.c + node.n <=10:
