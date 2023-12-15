@@ -30,6 +30,12 @@ def read_file(filename):
     return mapa, patients_positions_map, p_value
 
 
+def write_ouput(filename, map_to_search, solution_path):
+    file = open(filename, 'w')
+    sys.stdout = file
+    for i in range(len(solution_path),0,-1):
+        print("(" + str(solution_path[i-1].row) + "," + str(solution_path[i-1].col) + "):" + str(map_to_search[solution_path[i-1].row][solution_path[i-1].col]) + ":" + str(solution_path[i-1].battery))
+    file.close()
 
 
 class Bucket:
@@ -406,5 +412,5 @@ buckets = Bucket_Container(100)
 path = a_star(open_map, closed_map, buckets, initial_state, [final_state])
 
 print("Camino")
-
-print(path)
+write_ouput(file_to_read[:-4] + "-" + str(heuristic_chosen) + ".output", input_map, path)
+sys.stdout.close()
