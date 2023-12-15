@@ -90,9 +90,7 @@ class Bucket_Container:
                 if not self.buckets[i].isempty():
                     self.min_value = i
                     return node
-
             self.min_value = 999999999
-
         return node
 
 
@@ -144,6 +142,9 @@ class HashMap:
         else:
             self.hash_map[key_to_search].append(node)
 
+def check_backtrack(node1, node2):
+    return node1.n == node2.n and node1.c == node2.c and node1.row == node2.row and node1.col == node2.col and node1.patients_position == node2.patients_position
+
 
 # operators are move the ambulance to the right, left, up, down
 def cell_move(node, map_operator,patients_dictionary):
@@ -151,10 +152,10 @@ def cell_move(node, map_operator,patients_dictionary):
                      node.row, node.col,
                      node.cost, node, node.patients_position)
     heuristic_val = heuristic_value(node_next)
-    if map_operator[node.row][node.col] == 'X':
+    if map_operator[node.row][node.col] == 'X' or node.battery == 0 and node.parent.parent != node:
         return None
     # If we find an N patient we add 1 to the N patients in the van, 1 to the cost + heuristic value and remove the patient from the patients list
-    elif map_operator[node.row][node.col] == 'N' and [node.row, node.col] in patients_dictionary and node.c == 0:
+    elif map_operator[node.row][node.col] == 'N' and [node.row, node.col] in patients_dictionary and node.c == 0 and node.c + node.n <=10:
         # This can be changed to list of list with index being the column of a patient
         patients_positions_new = node.patients_position.copy()
         for i in range(len(patients_positions_new)):
@@ -165,7 +166,7 @@ def cell_move(node, map_operator,patients_dictionary):
                     node.battery - 1, node.row, node.col,
                     node.cost + 1 + heuristic_val, node, patients_positions_new)
     # Same as N patient but we add 1 to the C patients in the van
-    elif map_operator[node.row][node.col] == 'C' and [node.row, node.col] in patients_dictionary and node.n <= 8:
+    elif map_operator[node.row][node.col] == 'C' and [node.row, node.col] in patients_dictionary and node.n <= 8 and node.c <= 2 and node.c + node.n <=10:
         patients_positions_new = node.patients_position.copy()
         for i in range(len(patients_positions_new)):
             if patients_positions_new[i] == [node.row, node.col]:
@@ -178,7 +179,7 @@ def cell_move(node, map_operator,patients_dictionary):
     elif map_operator[node.row][node.col] == 'CC':
         return Node(0, node.n, node.battery - 1, node.row, node.col,
                     node.cost + 1 + heuristic_val, node, node.patients_position)
-    elif map_operator[node.row][node.col] == 'CN':
+    elif map_operator[node.row][node.col] == 'CN' and node.c == 0:
         return Node(node.c, 0, node.battery - 1, node.row, node.col,
                     node.cost + 1 + heuristic_val, node, node.patients_position)
     elif map_operator[node.row][node.col] == 'P':
@@ -255,97 +256,3 @@ input_map, patients_positions, parking_square = read_file("locations.csv")
 initial_patients = len(patients_positions)
 print(input_map)
 initial_state = Node(0, 0, 50, parking_square[0], parking_square[1], 0, None, patients_positions)
-final_state = Node(0, 0, 50, parking_square[0], parking_square[1], 0, None, patients_positions)
-node_right = move_right(initial_state, input_map, patients_positions)
-node_left_of_patient = Node(0, 0, 50, 0, 7, 0, None, patients_positions)
-node_patient = move_right(node_left_of_patient, input_map, patients_positions)
-node_patient.col = 7
-node_patient.row = 3
-node_care_center_with_patient = move_right(node_patient, input_map, patients_positions)
-node_next_to_CC_with_C = Node(1, 0, 50, 3, 3, 0, None, patients_positions)
-node_care_center_with_patient_cc = move_right(node_next_to_CC_with_C, input_map, patients_positions)
-print(repr(node_patient))
-print(repr(node_care_center_with_patient))
-print(repr(node_care_center_with_patient_cc))
-print("-----------PATIENT TESTS ---------")
-
-# patient at 2, 6
-node_left_of_patient = Node(0, 0, 50, 2, 5, 0, None, patients_positions)
-node_patient_from_left = move_right(node_left_of_patient, input_map, patients_positions)
-node_right_of_patient = Node(0, 0, 50, 2, 7, 0, None, patients_positions)
-node_patient_from_right = move_left(node_right_of_patient, input_map, patients_positions)
-node_up_of_patient = Node(0, 0, 50, 1, 6, 0, None, patients_positions)
-node_patient_from_up = move_down(node_up_of_patient, input_map, patients_positions)
-node_down_of_patient = Node(0, 0, 50, 3, 6, 0, None, patients_positions)
-node_patient_from_down = move_up(node_down_of_patient, input_map, patients_positions)
-print(repr(node_patient_from_up))
-print(repr(node_patient_from_down))
-print(repr(node_patient_from_left))
-print(repr(node_patient_from_right))
-print( node_patient_from_left == node_patient_from_right == node_patient_from_up == node_patient_from_down)
-print("-----------COST TESTS ---------")
-# two square at 2, 8
-node_left_of_patient = Node(0, 0, 50, 2, 7, 0, None, patients_positions)
-node_patient_from_left = move_right(node_left_of_patient, input_map, patients_positions)
-node_right_of_patient = Node(0, 0, 50, 2, 9, 0, None, patients_positions)
-node_patient_from_right = move_left(node_right_of_patient, input_map, patients_positions)
-node_up_of_patient = Node(0, 0, 50, 1, 8, 0, None, patients_positions)
-node_patient_from_up = move_down(node_up_of_patient, input_map, patients_positions)
-node_down_of_patient = Node(0, 0, 50, 3, 8, 0, None, patients_positions)
-node_patient_from_down = move_up(node_down_of_patient, input_map, patients_positions)
-print(repr(node_patient_from_up))
-print(repr(node_patient_from_down))
-print(repr(node_patient_from_left))
-print(repr(node_patient_from_right))
-print( node_patient_from_left == node_patient_from_right == node_patient_from_up == node_patient_from_down)
-
-print("-----------CC TESTS ---------")
-# CC at 3, 4
-node_left_of_cc_with_c = Node(1, 0, 50, 3, 3, 0, None, patients_positions)
-node_right_of_cc_with_c = Node(1, 0, 50, 3, 5, 0, None, patients_positions)
-node_up_of_cc_with_c = Node(1,0,50,2,4,0,None,patients_positions)
-node_down_of_cc_with_c = Node(1,0,50,4,4,0,None,patients_positions)
-node_cc_with_c_from_left = move_right(node_left_of_cc_with_c, input_map, patients_positions)
-node_cc_with_c_from_right = move_left(node_right_of_cc_with_c, input_map, patients_positions)
-node_cc_with_c_from_up = move_down(node_up_of_cc_with_c, input_map, patients_positions)
-node_cc_with_c_from_down = move_up(node_down_of_cc_with_c, input_map, patients_positions)
-print(repr(node_cc_with_c_from_left))
-print(repr(node_cc_with_c_from_right))
-print(repr(node_cc_with_c_from_up))
-print(repr(node_cc_with_c_from_down))
-print(node_cc_with_c_from_left == node_cc_with_c_from_right == node_cc_with_c_from_up == node_cc_with_c_from_down)
-
-print("-----------CN TESTS ---------")
-# CN at 3, 8
-node_left_of_cn_with_n = Node(0, 7, 50, 3, 7, 0, None, patients_positions)
-node_right_of_cn_with_n = Node(0, 7, 50, 3, 9, 0, None, patients_positions)
-node_up_of_cn_with_n = Node(0,7,50,2,8,0,None,patients_positions)
-node_down_of_cn_with_n = Node(0,7,50,4,8,0,None,patients_positions)
-node_cn_with_n_from_left = move_right(node_left_of_cn_with_n, input_map, patients_positions)
-node_cn_with_n_from_right = move_left(node_right_of_cn_with_n, input_map, patients_positions)
-node_cn_with_n_from_up = move_down(node_up_of_cn_with_n, input_map, patients_positions)
-node_cn_with_n_from_down = move_up(node_down_of_cn_with_n, input_map, patients_positions)
-print(repr(node_cn_with_n_from_left))
-print(repr(node_cn_with_n_from_right))
-print(repr(node_cn_with_n_from_up))
-print(repr(node_cn_with_n_from_down))
-print(node_cn_with_n_from_left == node_cn_with_n_from_right == node_cn_with_n_from_up == node_cn_with_n_from_down)
-print("-----------PARKING TESTS ---------")
-#parking at 7, 3
-node_with_c_and_n_left_of_parking = Node(1,1,50,7,2,0,None,patients_positions)
-node_with_c_and_n_right_of_parking = Node(1,1,50,7,4,0,None,patients_positions)
-node_with_c_and_n_up_of_parking = Node(1,1,50,6,3,0,None,patients_positions)
-node_with_c_and_n_down_of_parking = Node(1,1,50,8,3,0,None,patients_positions)
-node_parking_from_left = move_right(node_with_c_and_n_left_of_parking, input_map, patients_positions)
-node_parking_from_right = move_left(node_with_c_and_n_right_of_parking, input_map, patients_positions)
-node_parking_from_up = move_down(node_with_c_and_n_up_of_parking, input_map, patients_positions)
-node_parking_from_down = move_up(node_with_c_and_n_down_of_parking, input_map, patients_positions)
-print(repr(node_parking_from_left))
-print(repr(node_parking_from_right))
-print(repr(node_parking_from_up))
-print(repr(node_parking_from_down))
-
-final_state = Node(0,0,50,parking_square[0],parking_square[1],0,None,[None for _ in range(initial_patients)])
-print(node_parking_from_down == node_parking_from_up == node_parking_from_right == node_parking_from_left)
-print(node_patient_from_down)
-print(node_patient_from_down.expand())
