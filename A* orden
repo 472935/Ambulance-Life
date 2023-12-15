@@ -1,0 +1,20 @@
+Expandir nodo:
+    Obtener vector de generados
+    Para cada generdo:
+        Mirar en la closed list si debemos meterlo en open:
+            Cuando se encuentra el nodo en closed con menor cost -> NO reabrir
+
+            Si se encuentra con mayor coste en closed -> SACAR DE CLOSED y meter en Open
+
+            Si no se encuentra -> Meter en Open
+
+        Si debemos abrir:
+            Usar comando add_node -> Mete el nodo si no está, Si sí que está se queda con el que tenga menor coste
+            Actualizar buckets:
+                Si el nodo estaba en open ya:
+                    Quedarse con el valor minimo de coste:
+                        Si el coste que había antes era menor -> no hacer nada
+
+                        Si el coste que había antes era mayor -> quitar el nodo del bucket antiguo y meterlo con el coste reducido en el bucket nuevo que le toca.
+
+                Si el nodo no estaba en open -> Añadirlo al bucket correspondiente
