@@ -330,7 +330,7 @@ def move_right(node, map_operator, patients_dictionary):
 
 
 def move_left(node, map_operator, patients_dictionary):
-    if node.col - 1 > 0:
+    if node.col - 1 >= 0:
         node_to_expand = Node(node.c, node.n, node.battery, node.row, node.col - 1, node.cost, node,
                                  node.patients_position)
         return cell_move(node_to_expand, node, map_operator, patients_dictionary)
@@ -338,7 +338,7 @@ def move_left(node, map_operator, patients_dictionary):
 
 
 def move_up(node, map_operator, patients_dictionary):
-    if node.row - 1 > 0:
+    if node.row - 1 >= 0:
         node_to_expand = Node(node.c, node.n, node.battery, node.row - 1, node.col, node.cost, node,
                                  node.patients_position)
         return cell_move(node_to_expand, node, map_operator, patients_dictionary)
