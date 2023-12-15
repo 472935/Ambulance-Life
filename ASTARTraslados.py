@@ -239,7 +239,7 @@ def move_left(node, map_operator, patients_dictionary):
 
 
 def move_up(node, map_operator, patients_dictionary):
-    if node.row - 1 < 0:
+    if node.row - 1 > 0:
         node_next = Node(node.c, node.n, node.battery,
                          node.row - 1, node.col,
                          node.cost, node, node.patients_position)
@@ -379,3 +379,34 @@ node_care_center_with_patient_cc = move_right(node_next_to_CC_with_C, input_map,
 print(repr(node_patient))
 print(repr(node_care_center_with_patient))
 print(repr(node_care_center_with_patient_cc))
+# patient at 2, 6
+node_left_of_patient = Node(0, 0, 50, 2, 5, 0, None, patients_positions)
+node_patient_from_left = move_right(node_left_of_patient, input_map, patients_positions)
+node_right_of_patient = Node(0, 0, 50, 2, 7, 0, None, patients_positions)
+node_patient_from_right = move_left(node_right_of_patient, input_map, patients_positions)
+node_up_of_patient = Node(0, 0, 50, 1, 6, 0, None, patients_positions)
+node_patient_from_up = move_down(node_up_of_patient, input_map, patients_positions)
+node_down_of_patient = Node(0, 0, 50, 3, 6, 0, None, patients_positions)
+node_patient_from_down = move_up(node_down_of_patient, input_map, patients_positions)
+print(repr(node_patient_from_up))
+print(repr(node_patient_from_down))
+print(repr(node_patient_from_left))
+print(repr(node_patient_from_right))
+print( node_patient_from_left == node_patient_from_right == node_patient_from_up == node_patient_from_down)
+# two square at 2, 8
+node_left_of_patient = Node(0, 0, 50, 2, 7, 0, None, patients_positions)
+node_patient_from_left = move_right(node_left_of_patient, input_map, patients_positions)
+node_right_of_patient = Node(0, 0, 50, 2, 9, 0, None, patients_positions)
+node_patient_from_right = move_left(node_right_of_patient, input_map, patients_positions)
+node_up_of_patient = Node(0, 0, 50, 1, 8, 0, None, patients_positions)
+node_patient_from_up = move_down(node_up_of_patient, input_map, patients_positions)
+node_down_of_patient = Node(0, 0, 50, 3, 8, 0, None, patients_positions)
+node_patient_from_down = move_up(node_down_of_patient, input_map, patients_positions)
+print(repr(node_patient_from_up))
+print(repr(node_patient_from_down))
+print(repr(node_patient_from_left))
+print(repr(node_patient_from_right))
+print( node_patient_from_left == node_patient_from_right == node_patient_from_up == node_patient_from_down)
+
+
+print(expand_node_operators(node_patient_from_down))
