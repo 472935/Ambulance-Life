@@ -90,9 +90,7 @@ class Bucket_Container:
                 if not self.buckets[i].isempty():
                     self.min_value = i
                     return node
-
             self.min_value = 999999999
-
         return node
 
 
@@ -143,6 +141,9 @@ class HashMap:
                 found_node.parent = node.parent
         else:
             self.hash_map[key_to_search].append(node)
+
+def check_backtrack(node1, node2):
+    return node1.n == node2.n and node1.c == node2.c and node1.row == node2.row and node1.col == node2.col and node1.patients_position == node2.patients_position
 
 
 # operators are move the ambulance to the right, left, up, down
