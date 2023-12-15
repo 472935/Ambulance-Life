@@ -290,7 +290,7 @@ def cell_move(node, node_parent, map_operator):
         return Node(node.c, node.n + 1,
                     node.battery - 1, node.row, node.col,
                     node.cost + 1, node_parent, patients_positions_new)
-    elif map_operator[node.row][node.col] == 'N' and [node.row, node.col] not in node.patients_position:
+    elif map_operator[node.row][node.col] == 'N':
         return Node(node.c, node.n,
                     node.battery - 1, node.row, node.col,
                     node.cost + 1, node_parent, node.patients_position)
