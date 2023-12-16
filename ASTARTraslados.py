@@ -168,7 +168,7 @@ def heuristic5(node, relevant_locations):
     return sum
 
 def used_heuristic(node, relevant_locations):
-    return heuristic3(node,relevant_locations)
+    return heuristic2(node,relevant_locations)
 
 class Bucket_Container:
     def __init__(self, initial_size):
@@ -266,11 +266,12 @@ class Node:
 
         other = self.parent.parent
         while other is not None:
+            if self.c != other.c or self.n != other.n or other.battery < self.battery:  # If somewhere in the middle I pick or leave a patient there is no bad loop
+                return False
+
             if self.row == other.row and self.col == other.col and self.c == other.c and self.n == other.n:
                 return True
 
-            if self.c != other.c or self.n != other.n:  # If somewhere in the middle I pick or leave a patient there is no bad loop
-                return False
             other = other.parent
 
         return False
@@ -337,6 +338,9 @@ class HashMap:
 
 
 def a_star(open_map: HashMap, closed_map: HashMap, buckets: Bucket_Container, start_node: Node, goal_nodes, r_v: Relevant_Locations):
+
+    expanded_count = 0
+
     buckets.insert(start_node, r_v)
     open_map.add_node(start_node)
 
@@ -344,7 +348,7 @@ def a_star(open_map: HashMap, closed_map: HashMap, buckets: Bucket_Container, st
         best_node = buckets.extract()
 
         if best_node is None:  # Open list empty before finding goal
-            return "No path possible"
+            return "No path possible", expanded_count
 
         open_map.remove(best_node)
         #print("Cost: " + str(best_node.cost) + "patients: ")
@@ -356,9 +360,10 @@ def a_star(open_map: HashMap, closed_map: HashMap, buckets: Bucket_Container, st
         #print(best_node.cost)
 
         if best_node in goal_nodes:
-            return best_node.path()
+            return best_node.path(), expanded_count
 
         generated_nodes = best_node.expand(r_v)
+        expanded_count += 1
         for node in generated_nodes:
             found = closed_map.contains_node(node)
             if type(found) is Node:  # We are in the case when the node was in closed list with greater cost,
@@ -445,7 +450,7 @@ def cell_move(node, node_parent, r_v: Relevant_Locations):
     if type(gen_node) is Node and manhattan_distance(gen_node, r_v.parking_pos) <= gen_node.battery:
         return gen_node
 
-def get_movement(node, r_v: Relevant_Locations):
+def get_movement(node, r_v: Relevant_Locations):  # Claculate all the positions where we could move and return the
     gen_nodes = []
     for i in range(-1,2,1):
         for j in range(-1,2,1):
@@ -457,32 +462,7 @@ def get_movement(node, r_v: Relevant_Locations):
     return gen_nodes
 
 
-# h = HashMap(5)
-# h2 = HashMap(5)
-# n1 = Node("Ines", 0, 0, 0, 0, 7, 0)
-# h.add_node(n1)
-# n2 = Node("Tortuga", 0, 0, 0, 0, 5, 0)
-# h.add_node(n2)
-# n3 = Node("Ines", 0, 0, 0, 0, 5, "Lolito Fdez")
-# h.add_node(n3)
-#
-# lolito = HashMap(3)
-# m = Node("Mono", 0, 0, 0, 0, 3, 0)
-# lolito.add_node(m)
-# m_mayor = Node("Mono", 0, 0, 0, 0, 8, 0)
-# m_menor = Node("Mono", 0, 0, 0, 0, 2, 0)
-# a = lolito.contains_node(m_mayor)
-# b = lolito.contains_node(m_menor)
-# k = Node("Araña", 0, 0, 0, 0, 3, 0)
-# c = lolito.contains_node(k)
 
-# b = Bucket_Container()
-# n = Node(0,0,0,0,0,0,13,0)
-# b.insert(n)
-# n.cost=3
-# b.insert(n)
-# a = b.extract()
-# c = b.extract()
 begin = time.time()
 file_to_read = sys.argv[1]
 heuristic_chosen = int(sys.argv[2])
@@ -500,7 +480,7 @@ open_map = HashMap(100000)
 closed_map = HashMap(100000)
 buckets = Bucket_Container(10000)
 
-path = a_star(open_map, closed_map, buckets, initial_state, [final_state], relevant_pos)
+path, expanded_nodes = a_star(open_map, closed_map, buckets, initial_state, [final_state], relevant_pos)
 
 print("Camino")
 end = time.time()
