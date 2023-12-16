@@ -26,6 +26,10 @@ def read_file(filename):
             row_number += 1
 
             mapa.append(costs)
+    for i in range(len(mapa)):
+        if len(mapa[i]) != len(mapa[0]):
+            print("Error: The map is not rectangular")
+            exit(1)
 
     return mapa, patients_positions_map, p_value
 
@@ -33,6 +37,10 @@ def read_file(filename):
 def write_ouput(filename, map_to_search, solution_path):
     file = open(filename, 'w')
     sys.stdout = file
+    if solution_path == "No path possible":
+        print(solution_path)
+        file.close()
+        return
     for i in range(len(solution_path),0,-1):
         print("(" + str(solution_path[i-1].row) + "," + str(solution_path[i-1].col) + "):" + str(map_to_search[solution_path[i-1].row][solution_path[i-1].col]) + ":" + str(solution_path[i-1].battery))
     file.close()
@@ -80,7 +88,7 @@ class Bucket_Container:
         self.min_value = 999999999  # Start with the arbitrary super large value
 
     def insert(self, node):
-        f_val = node.cost + heuristic1(node)
+        f_val = node.cost + heuristic_value(node)
 
         if f_val < 0:
             raise Exception('Negative f_value obtained')
