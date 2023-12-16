@@ -115,7 +115,7 @@ def heuristic2(node, relevant_locations):
     return 2**len(node.patients_position) + manhattan_distance(node, relevant_locations.parking_pos) + 3**(node.n + node.c)
 
 def used_heuristic(node, relevant_locations):
-    return heuristic2(node,relevant_locations)
+    return heuristic1(node,relevant_locations)
 
 class Bucket_Container:
     def __init__(self, initial_size):
@@ -127,7 +127,7 @@ class Bucket_Container:
         self.min_value = 999999999  # Start with the arbitrary super large value
 
     def insert(self, node, r_v):
-        f_val = node.cost + heuristic1(node, r_v)
+        f_val = node.cost + used_heuristic(node, r_v)
 
         if f_val < 0:
             raise Exception('Negative f_value obtained')
@@ -168,7 +168,7 @@ class Bucket_Container:
         return node
 
     def remove(self, node, r_v):
-        f_val = node.cost + heuristic1(node, r_v)
+        f_val = node.cost + used_heuristic(node, r_v)
 
         if f_val >= self.size:
             raise Exception('Node to remove is out of the range of the bucket container')
@@ -207,9 +207,20 @@ class Node:
     def __eq__(self, other):
         return self.row == other.row and self.col == other.col and self.battery == other.battery and self.c == other.c and self.n == other.n and self.patients_position == other.patients_position
 
-    def check_backtrack(self):
+    def check_backtrack(self):  # Prevents making a loop without picking or leaving a patient in the middle.
+        if self.parent is None or self.parent.parent is None:
+            return False
+
         other = self.parent.parent
-        return self.row == other.row and self.col == other.col and self.c == other.c and self.n == other.n and self.patients_position == other.patients_position
+        while other is not None:
+            if self.row == other.row and self.col == other.col and self.c == other.c and self.n == other.n:
+                return True
+
+            if self.c != other.c or self.n != other.n:  # If somewhere in the middle I pick or leave a patient there is no bad loop
+                return False
+            other = other.parent
+
+        return False
 
 
     def expand(self, r_v):
@@ -289,11 +300,12 @@ def a_star(open_map: HashMap, closed_map: HashMap, buckets: Bucket_Container, st
         closed_map.add_node(best_node)
 
         # print("Battery:",best_node.battery,"Cost:",best_node.cost, "Total patients:", best_node.patients_position)
-        #print(heuristic1(best_node, r_v) + best_node.cost, best_node.patients_position)
+        #print(used_heuristic(best_node, r_v) + best_node.cost, best_node.patients_position, best_node, best_node.cost)
         #print(best_node.cost)
 
         if best_node in goal_nodes:
             return best_node.path()
+
         generated_nodes = best_node.expand(r_v)
         for node in generated_nodes:
             found = closed_map.contains_node(node)
@@ -325,7 +337,7 @@ def a_star(open_map: HashMap, closed_map: HashMap, buckets: Bucket_Container, st
 def cell_move(node, node_parent, r_v: Relevant_Locations):
     gen_node = None
 
-    if r_v.mapa[node.row][node.col] == 'X' or node.battery == 0 or (node.parent.parent is not None and node.check_backtrack()):
+    if r_v.mapa[node.row][node.col] == 'X' or node.battery == 0 or node.check_backtrack():
         return None
     # If we find an N patient we add 1 to the N patients in the van, 1 to the cost + heuristic value and remove the patient from the patients list
     elif r_v.mapa[node.row][node.col] == 'N' and [node.row, node.col] in node.patients_position and node.c == 0 and node.c + node.n <=10:
@@ -428,11 +440,12 @@ parking_square = relevant_pos.parking_pos
 initial_state = Node(0, 0, 50, parking_square[0], parking_square[1], 0, None, patients_positions)
 final_state = Node(0, 0, 50, parking_square[0], parking_square[1], 0, None, [])
 
-open_map = HashMap(1000)
-closed_map = HashMap(1000)
-buckets = Bucket_Container(1000)
+open_map = HashMap(100000)
+closed_map = HashMap(100000)
+buckets = Bucket_Container(10000)
 
 path = a_star(open_map, closed_map, buckets, initial_state, [final_state], relevant_pos)
+
 print("Camino")
 end = time.time()
 write_ouput(file_to_read[:-4] + "-" + str(heuristic_chosen), relevant_pos.mapa, path, end-begin)
