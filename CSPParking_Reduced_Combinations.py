@@ -64,7 +64,6 @@ def write_file(file_name: str, solution_to_write: list, solution_num: int):
         row_to_write.append(['-' for _ in range(n)])
 
     for i in solution_to_write:
-        print(int(i[1]) // m, int(i[1]) % n)
         row_to_write[int(i[1]) // n][int(i[1]) % n] = i[0]
 
     with open(file_name, "w") as file_output:
@@ -75,6 +74,14 @@ def write_file(file_name: str, solution_to_write: list, solution_num: int):
         for index_row in range(m):
             csvwriter.writerow(row_to_write[index_row])
     file_output.close()
+
+def map_id(solution_with_id,ambulances):
+    final_states = []
+    for i in solution_with_id:
+        for j in ambulances:
+            if i[0] == j.id:
+                final_states.append((str(j.id) + "-T" + str(j.urgent) + "U" + "-" + str(j.charger), i[1]))
+    return final_states
 
 
 class CSP:
@@ -97,7 +104,6 @@ class Ambulance:
 # Functions for cosntraints
 # If a TSU ambulance is placed in a row there can’t be any ambulance in front of it except if it is a TSU ambulance
 def tsu_row(ambulance_tsu_row, ambulance_tnu_row):
-    #
     # if ambulance_tsu_row != ambulance_tnu_row:
     # Check first if they are close enough, and they are in the same row
     if ambulance_tnu_row > ambulance_tsu_row and ambulance_tnu_row // n == ambulance_tsu_row // n:
@@ -132,9 +138,9 @@ m = dimensions[0]
 n = dimensions[1]
 
 # For each m there is n numbers
-print(electric)
+
 domain_electric = [(electrical_mn[0] - 1) * n + (electrical_mn[1] - 1) for electrical_mn in electric]
-print(domain_electric)
+
 problem = Problem()
 # We now consider the domain values of the grid to be a singular array of integers
 # (1,1) -> 1 and (1,2)-> 2 so on (2,1) -> 6 in 5*6 matrix
@@ -145,7 +151,6 @@ for ambulance in ambulances:
 
     # If cooler domain is in the electrical grid
     if ambulance.charger == "C":
-        print(ambulance.id, domain_electric)
         problem.addVariable(ambulance.id, domain_electric)
 # Now we will add the constraints
 problem.addConstraint(AllDifferentConstraint(), [ambulance.id for ambulance in ambulances])
@@ -153,20 +158,23 @@ problem.addConstraint(AllDifferentConstraint(), [ambulance.id for ambulance in a
 for ambulance_i in ambulances:  # Que pasa cuando dos ambulancias son la misma
     for ambulance_j in ambulances:
         for ambulance_k in ambulances:
-            problem.addConstraint(not_adjacent, (ambulance_i.id, ambulance_j.id, ambulance_k.id))
+            if ambulance_i.id != ambulance_j.id and ambulance_i.id != ambulance_k.id and ambulance_j.id != ambulance_k.id:
+                problem.addConstraint(not_adjacent, (ambulance_i.id, ambulance_j.id, ambulance_k.id))
 # Iterate without transposition in the variables with the tsu being with C in the 6th position
 for ambulance1 in ambulances:
     for ambulance2 in ambulances:
         if ambulance2.urgent == "S" and ambulance1.urgent == "N":
             problem.addConstraint(tsu_row, (ambulance2.id, ambulance1.id))
-        else:
-            if ambulance1.charger == ambulance2.charger and int(ambulance1.id) < int(
-                    ambulance2.id):  # With previous else, forces ambulances of same urgency and chrger type to be placed eith increasing id order to reduce the number of combinations of solutions
-                problem.addConstraint(lambda a1, a2: a1 < a2, (ambulance1.id, ambulance2.id))
+        if ambulance1.charger == ambulance2.charger and int(ambulance1.id) < int(ambulance2.id) and ambulance1.urgent == ambulance2.urgent:
+            # With previous else, forces ambulances of same urgency and chrger type to be placed eith increasing id order to reduce the number of combinations of solutions
+            problem.addConstraint(lambda a1, a2: a1 < a2, (ambulance1.id, ambulance2.id))
+
 
 solutions = problem.getSolutions()
+
 if len(solutions) == 0:
     print("No solution found")
     exit(1)
-write_file(parking_file_path + ".csv", list(solutions[0].items()), 5)
+solution_write = map_id(list(solutions[0].items()), ambulances)
+write_file(parking_file_path + ".csv", solution_write, 5)
 
