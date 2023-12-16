@@ -4,6 +4,13 @@ import sys
 heuristic_chosen = 0
 
 
+class Relevant_Locations:  # To store parking position, cn position, cc position
+    def __init__(self, p_pos, cn_pos, cc_pos):
+        self.parking_pos = p_pos
+        self.cn_pos = cn_pos
+        self.cc_pos = cc_pos
+
+
 def read_file(filename):
     mapa = []
     total_patients = 0
@@ -23,6 +30,10 @@ def read_file(filename):
                     patients_positions_map.append([row_number, i])
                 elif costs[i] == 'P':
                     p_value = [row_number, i]
+                elif costs[i] == 'CN':
+                    cn_value = [row_number, i]
+                elif costs[i] == 'CC':
+                    cc_value = [row_number, i]
             row_number += 1
 
             mapa.append(costs)
@@ -31,7 +42,7 @@ def read_file(filename):
             print("Error: The map is not rectangular")
             exit(1)
 
-    return mapa, patients_positions_map, p_value
+    return mapa, patients_positions_map, Relevant_Locations(p_value, cn_value, cc_value)
 
 
 def write_ouput(filename, map_to_search, solution_path):
@@ -43,6 +54,7 @@ def write_ouput(filename, map_to_search, solution_path):
         return
     for i in range(len(solution_path),0,-1):
         print("(" + str(solution_path[i-1].row) + "," + str(solution_path[i-1].col) + "):" + str(map_to_search[solution_path[i-1].row][solution_path[i-1].col]) + ":" + str(solution_path[i-1].battery))
+    sys.stdout = sys.__stdout__
     file.close()
 
 
@@ -74,8 +86,23 @@ class Bucket:
         raise Exception("node is not in the bucket")
 
 
-def heuristic1(node):
-    return 0
+def manhattan_distance(node, pos):
+    return abs(node.row - pos[0]) + abs(node.col - pos[1])
+
+
+def heuristic1(node, relevant_locations):
+    #return 0
+    if node.c > 0:
+        return manhattan_distance(node, relevant_locations.cc_pos)
+
+    for position in node.patients_position:
+        if position is not None:
+            return manhattan_distance(node, position)
+
+    if node.n > 0:
+        return manhattan_distance(node, relevant_locations.cn_pos)
+
+    return manhattan_distance(node, relevant_locations.parking_pos)
 
 
 class Bucket_Container:
@@ -87,8 +114,8 @@ class Bucket_Container:
 
         self.min_value = 999999999  # Start with the arbitrary super large value
 
-    def insert(self, node):
-        f_val = node.cost + heuristic_value(node)
+    def insert(self, node, r_v):
+        f_val = node.cost + heuristic1(node, r_v)
 
         if f_val < 0:
             raise Exception('Negative f_value obtained')
@@ -128,13 +155,15 @@ class Bucket_Container:
         self.update_min_value()
         return node
 
-    def remove(self, node):
-        if node.cost >= self.size:
+    def remove(self, node, r_v):
+        f_val = node.cost + heuristic1(node, r_v)
+
+        if f_val >= self.size:
             raise Exception('Node to remove is out of the range of the bucket container')
 
-        self.buckets[node.cost].remove(node)
+        self.buckets[f_val].remove(node)
 
-        if node.cost == self.min_value:
+        if f_val == self.min_value:
             self.update_min_value()
 
 
@@ -233,8 +262,8 @@ class HashMap:
         # operators are move the ambulance to the right, left, up, down, pick up a patient, drop a patient
 
 
-def a_star(open_map: HashMap, closed_map: HashMap, buckets: Bucket_Container, start_node: Node, goal_nodes):
-    buckets.insert(start_node)
+def a_star(open_map: HashMap, closed_map: HashMap, buckets: Bucket_Container, start_node: Node, goal_nodes, r_v: Relevant_Locations):
+    buckets.insert(start_node, r_v)
     open_map.add_node(start_node)
 
     while True:
@@ -245,8 +274,9 @@ def a_star(open_map: HashMap, closed_map: HashMap, buckets: Bucket_Container, st
 
         open_map.remove(best_node)
 
-        #print("Battery:",best_node.battery,"Cost:",best_node.cost, "Total patients:", best_node.patients_position)
-        print(best_node)
+        # print("Battery:",best_node.battery,"Cost:",best_node.cost, "Total patients:", best_node.patients_position)
+        print(heuristic1(best_node, r_v) + best_node.cost, best_node.patients_position)
+        #print(best_node.cost)
 
         if best_node in goal_nodes:
             return best_node.path()
@@ -258,7 +288,7 @@ def a_star(open_map: HashMap, closed_map: HashMap, buckets: Bucket_Container, st
                 # in this case after removing the node from closed (done by contains_node method), we will add the node we generated to open_map and buckets,
                 # we don't need to check if already present since one node can not be in open and closed at the same time
                 open_map.add_node(node)
-                buckets.insert(node)
+                buckets.insert(node, r_v)
 
             elif found == 0:  # Node is not in the closed list, we have to check if it is already present in open before adding.
                 in_open_map = open_map.contains_node(node)
@@ -271,18 +301,11 @@ def a_star(open_map: HashMap, closed_map: HashMap, buckets: Bucket_Container, st
 
                     if type(in_open_map) is Node:  # Node was in open map with greater cost: contains node removed it,
                         # Now we have to also remove the old cost node from the buckets.
-                        buckets.remove(in_open_map)
+                        buckets.remove(in_open_map, r_v)
 
                     # Introduce the node if it was not in open / introduce the node with the updated cost after removing it from open and buckets
                     open_map.add_node(node)
-                    buckets.insert(node)
-
-
-def heurestic_value(node):
-    if heuristic_chosen == 1:
-        return node.total_patients + node.c + node.n
-    elif heuristic_chosen == 2:
-        pass
+                    buckets.insert(node, r_v)
 
 
 # operators are move the ambulance to the right, left, up, down
@@ -407,8 +430,10 @@ file_to_read = sys.argv[1]
 heuristic_chosen = int(sys.argv[2])
 number_patients_infectious = 0
 
-input_map, patients_positions, parking_square = read_file(file_to_read)
+input_map, patients_positions, relevant_pos = read_file(file_to_read)
 initial_patients = len(patients_positions)
+
+parking_square = relevant_pos.parking_pos
 
 initial_state = Node(0, 0, 50, parking_square[0], parking_square[1], 0, None, patients_positions)
 final_state = Node(0, 0, 50, parking_square[0], parking_square[1], 0, None, [None for _ in range(initial_patients)])
@@ -417,8 +442,8 @@ open_map = HashMap(100)
 closed_map = HashMap(100)
 buckets = Bucket_Container(100)
 
-path = a_star(open_map, closed_map, buckets, initial_state, [final_state])
+path = a_star(open_map, closed_map, buckets, initial_state, [final_state], relevant_pos)
 
 print("Camino")
 write_ouput(file_to_read[:-4] + "-" + str(heuristic_chosen) + ".output", input_map, path)
-sys.stdout.close()
+print("LOlo")
