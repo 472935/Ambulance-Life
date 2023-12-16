@@ -50,7 +50,7 @@ def read_file(filename):
 def write_ouput(filename, map_to_search, solution_path,total_time, expanded_nodes):
     with open(filename + ".output", 'w') as f:
         if solution_path == "No path possible":
-            print(solution_path)
+            print(solution_path, file = f)
             f.close()
             return
         for i in range(len(solution_path),0,-1):
@@ -355,13 +355,8 @@ def a_star(open_map: HashMap, closed_map: HashMap, buckets: Bucket_Container, st
             return "No path possible", expanded_count
 
         open_map.remove(best_node)
-        #print("Cost: " + str(best_node.cost) + "patients: ")
-        #print(best_node.patients_position)
-        closed_map.add_node(best_node)
 
-        # print("Battery:",best_node.battery,"Cost:",best_node.cost, "Total patients:", best_node.patients_position)
-        print(heuristic(best_node, r_v) + best_node.cost, best_node.patients_position, best_node, best_node.cost)
-        #print(best_node.cost)
+        closed_map.add_node(best_node)
 
         if best_node in goal_nodes:
             return best_node.path(), expanded_count
@@ -486,6 +481,5 @@ buckets = Bucket_Container(10000)
 
 path, expanded_nodes = a_star(open_map, closed_map, buckets, initial_state, [final_state], relevant_pos)
 
-print("Camino")
 end = time.time()
 write_ouput(file_to_read[:-4] + "-" + str(heuristic_chosen), relevant_pos.mapa, path, end-begin, expanded_nodes)
