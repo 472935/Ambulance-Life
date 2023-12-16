@@ -162,7 +162,7 @@ def heuristic4(node, relevant_locations):
     if node.c > 0:
         sum + distance(pos, relevant_locations.cc_pos)
 
-    if node.n > 0:
+    elif node.n > 0:
         sum + distance(pos, relevant_locations.cn_pos)
 
     return sum + distance(pos, relevant_locations.parking_pos)
