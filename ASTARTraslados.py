@@ -112,7 +112,7 @@ def heuristic1(node, relevant_locations):
     return manhattan_distance(node, relevant_locations.parking_pos)
 
 def heuristic2(node, relevant_locations):
-    if len(node.patients_position) == 0:
+    if len(node.patients_position) == 0 and node.c == 0 and node.n == 0:
         return manhattan_distance(node, relevant_locations.parking_pos)
     max_dist = manhattan_distance(node,node.patients_position[0])
     for position in node.patients_position:
