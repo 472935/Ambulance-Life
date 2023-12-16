@@ -158,6 +158,15 @@ def heuristic4(node, relevant_locations):
     return sum
 
 
+def heuristic5(node, relevant_locations):
+    min = 0
+    for i in range(len(node.patients_position)):
+        for j in range(len(node.patients_position)):
+            if i != j:
+                return manhattan_distance(node, node.patients_position[i]) + manhattan_distance(node, node.patients_position[j])
+
+    return sum
+
 def used_heuristic(node, relevant_locations):
     return heuristic3(node,relevant_locations)
 
@@ -325,7 +334,6 @@ class HashMap:
                 return
         raise Exception('Node not found')
 
-        # operators are move the ambulance to the right, left, up, down, pick up a patient, drop a patient
 
 
 def a_star(open_map: HashMap, closed_map: HashMap, buckets: Bucket_Container, start_node: Node, goal_nodes, r_v: Relevant_Locations):
@@ -394,6 +402,7 @@ def cell_move(node, node_parent, r_v: Relevant_Locations):
         gen_node = Node(node.c, node.n + 1,
                     node.battery - 1, node.row, node.col,
                     node.cost + 1, node_parent, patients_positions_new)
+    #Case the we pass over a N patient without picking him up
     elif r_v.mapa[node.row][node.col] == 'N':
         gen_node = Node(node.c, node.n,
                     node.battery - 1, node.row, node.col,
@@ -408,17 +417,20 @@ def cell_move(node, node_parent, r_v: Relevant_Locations):
         gen_node = Node(node.c + 1, node.n,
                     node.battery - 1, node.row, node.col,
                     node.cost + 1, node_parent, patients_positions_new)
-    elif r_v.mapa[node.row][node.col] == 'C' and [node.row, node.col] not in node.patients_position:
+    #Case that we pass over a C patient and we don't have the conditions to pick him up
+    elif r_v.mapa[node.row][node.col] == 'C':
         gen_node = Node(node.c, node.n,
                     node.battery - 1, node.row, node.col,
                     node.cost + 1, node_parent, node.patients_position)
     # Care centers +1 to cost -1 battery remove all c or n patients from van
     elif r_v.mapa[node.row][node.col] == 'CC':
-        gen_node = Node(0, node.n, node.battery - 1, node.row, node.col,
+        gen_node = Node(0, node.n, node.battery -
+                        1, node.row, node.col,
                     node.cost + 1, node_parent, node.patients_position)
     elif r_v.mapa[node.row][node.col] == 'CN' and node.c == 0:
         gen_node = Node(node.c, 0, node.battery - 1, node.row, node.col,
                     node.cost + 1, node_parent, node.patients_position)
+        #Case that we pass over a CN center and we can't drop off the N patients
     elif r_v.mapa[node.row][node.col] == 'CN':
         gen_node = Node(node.c, node.n, node.battery - 1, node.row, node.col,
                     node.cost + 1, node_parent, node.patients_position)
