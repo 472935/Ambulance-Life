@@ -5,10 +5,12 @@ heuristic_chosen = 0
 
 
 class Relevant_Locations:  # To store parking position, cn position, cc position
-    def __init__(self, p_pos, cn_pos, cc_pos):
+    def __init__(self, p_pos, cn_pos, cc_pos, mapa):
         self.parking_pos = p_pos
         self.cn_pos = cn_pos
         self.cc_pos = cc_pos
+        self.mapa = mapa
+
 
 
 def read_file(filename):
@@ -42,7 +44,7 @@ def read_file(filename):
             print("Error: The map is not rectangular")
             exit(1)
 
-    return mapa, patients_positions_map, Relevant_Locations(p_value, cn_value, cc_value)
+    return patients_positions_map, Relevant_Locations(p_value, cn_value, cc_value, mapa)
 
 
 def write_ouput(filename, map_to_search, solution_path):
@@ -200,9 +202,8 @@ class Node:
         return self.row == other.row and self.col == other.col and self.c == other.c and self.n == other.n and self.patients_position == other.patients_position
 
 
-    def expand(self):
-        generated = [move_right(self, input_map), move_left(self, input_map),
-                     move_up(self, input_map), move_down(self, input_map)]
+    def expand(self, r_v):
+        generated = get_movement(self, r_v)
         return [i for i in generated if i is not None]
 
 
@@ -281,7 +282,7 @@ def a_star(open_map: HashMap, closed_map: HashMap, buckets: Bucket_Container, st
         if best_node in goal_nodes:
             return best_node.path()
 
-        generated_nodes = best_node.expand()
+        generated_nodes = best_node.expand(r_v)
         for node in generated_nodes:
             found = closed_map.contains_node(node)
             if type(found) is Node:  # We are in the case when the node was in closed list with greater cost,
@@ -309,94 +310,100 @@ def a_star(open_map: HashMap, closed_map: HashMap, buckets: Bucket_Container, st
 
 
 # operators are move the ambulance to the right, left, up, down
-def cell_move(node, node_parent, map_operator):
+def cell_move(node, node_parent, r_v: Relevant_Locations):
+    gen_node = None
 
-    node_next = Node(node.c, node.n, node.battery,
-                     node.row, node.col,
-                     node.cost, node_parent, node.patients_position)
-    if map_operator[node.row][node.col] == 'X' or node.battery == 0 or node.parent.parent is not None and node.check_backtrack():
+    if r_v.mapa[node.row][node.col] == 'X' or node.battery == 0 or node.parent.parent is not None and node.check_backtrack():
         return None
     # If we find an N patient we add 1 to the N patients in the van, 1 to the cost + heuristic value and remove the patient from the patients list
-    elif map_operator[node.row][node.col] == 'N' and [node.row, node.col] in node.patients_position and node.c == 0 and node.c + node.n <=10:
+    elif r_v.mapa[node.row][node.col] == 'N' and [node.row, node.col] in node.patients_position and node.c == 0 and node.c + node.n <=10:
         # This can be changed to list of list with index being the column of a patient
         patients_positions_new = node.patients_position.copy()
         for i in range(len(patients_positions_new)):
             if patients_positions_new[i] == [node.row, node.col]:
                 patients_positions_new[i] = None
                 break
-        return Node(node.c, node.n + 1,
+        gen_node = Node(node.c, node.n + 1,
                     node.battery - 1, node.row, node.col,
                     node.cost + 1, node_parent, patients_positions_new)
-    elif map_operator[node.row][node.col] == 'N':
-        return Node(node.c, node.n,
+    elif r_v.mapa[node.row][node.col] == 'N':
+        gen_node = Node(node.c, node.n,
                     node.battery - 1, node.row, node.col,
                     node.cost + 1, node_parent, node.patients_position)
     # Same as N patient but we add 1 to the C patients in the van
-    elif map_operator[node.row][node.col] == 'C' and [node.row, node.col] in node.patients_position and node.n <= 8 and node.c <= 2 and node.c + node.n <=10:
+    elif r_v.mapa[node.row][node.col] == 'C' and [node.row, node.col] in node.patients_position and node.n <= 8 and node.c <= 2 and node.c + node.n <=10:
         patients_positions_new = node.patients_position.copy()
         for i in range(len(patients_positions_new)):
             if patients_positions_new[i] == [node.row, node.col]:
                 patients_positions_new[i] = None
                 break
-        return Node(node.c + 1, node.n,
+        gen_node = Node(node.c + 1, node.n,
                     node.battery - 1, node.row, node.col,
                     node.cost + 1, node_parent, patients_positions_new)
-    elif map_operator[node.row][node.col] == 'C' and [node.row, node.col] not in node.patients_position:
-        return Node(node.c, node.n,
+    elif r_v.mapa[node.row][node.col] == 'C' and [node.row, node.col] not in node.patients_position:
+        gen_node = Node(node.c, node.n,
                     node.battery - 1, node.row, node.col,
                     node.cost + 1, node_parent, node.patients_position)
     # Care centers +1 to cost -1 battery remove all c or n patients from van
-    elif map_operator[node.row][node.col] == 'CC':
-        return Node(0, node.n, node.battery - 1, node.row, node.col,
+    elif r_v.mapa[node.row][node.col] == 'CC':
+        gen_node = Node(0, node.n, node.battery - 1, node.row, node.col,
                     node.cost + 1, node_parent, node.patients_position)
-    elif map_operator[node.row][node.col] == 'CN' and node.c == 0:
-        return Node(node.c, 0, node.battery - 1, node.row, node.col,
+    elif r_v.mapa[node.row][node.col] == 'CN' and node.c == 0:
+        gen_node = Node(node.c, 0, node.battery - 1, node.row, node.col,
                     node.cost + 1, node_parent, node.patients_position)
-    elif map_operator[node.row][node.col] == 'CN':
-        return Node(node.c, node.n, node.battery - 1, node.row, node.col,
+    elif r_v.mapa[node.row][node.col] == 'CN':
+        gen_node = Node(node.c, node.n, node.battery - 1, node.row, node.col,
                     node.cost + 1, node_parent, node.patients_position)
-    elif map_operator[node.row][node.col] == 'P':
-        return Node(node.c, node.n, 50, node.row, node.col,
+    elif r_v.mapa[node.row][node.col] == 'P':
+        gen_node = Node(node.c, node.n, 50, node.row, node.col,
                     node.cost + 1, node_parent, node.patients_position)
-    elif isinstance(map_operator[node.row][node.col], int):
-        return Node(node.c, node.n,
-                    node.battery - map_operator[node.row][node.col], node.row, node.col,
-                    node.cost + map_operator[node.row][node.col], node_parent, node.patients_position)
+    elif isinstance(r_v.mapa[node.row][node.col], int):
+        gen_node = Node(node.c, node.n,
+                    node.battery - r_v.mapa[node.row][node.col], node.row, node.col,
+                    node.cost + r_v.mapa[node.row][node.col], node_parent, node.patients_position)
+    if type(gen_node) is Node and manhattan_distance(gen_node, r_v.parking_pos):
+        return gen_node
 
-def move_right(node, map_operator):
-    if node.col + 1 < len(input_map[0]):
-        node_to_expand = Node(node.c, node.n, node.battery, node.row, node.col + 1, node.cost, node, node.patients_position)
-        return cell_move(node_to_expand, node, map_operator)
-    return None
+def get_movement(node, r_v: Relevant_Locations):
+    gen_nodes = []
+    for i in range(-1,2,1):
+        for j in range(-1,2,1):
+            if abs(i) + abs(j) == 1 and 0 <= node.col + j < len(r_v.mapa[0]) and 0 <= node.row + i < len(r_v.mapa):
+                node_to_expand = Node(node.c, node.n, node.battery, node.row + i, node.col + j, node.cost, node, node.patients_position)
+                processed_node = cell_move(node_to_expand, node, r_v)
+                gen_nodes.append(processed_node)
 
+    return gen_nodes
 
-def move_left(node, map_operator):
-    if node.col - 1 >= 0:
-        node_to_expand = Node(node.c, node.n, node.battery, node.row, node.col - 1, node.cost, node,
-                                 node.patients_position)
-        return cell_move(node_to_expand, node, map_operator)
-    return None
-
-
-def move_up(node, map_operator):
-    if node.row - 1 >= 0:
-        node_to_expand = Node(node.c, node.n, node.battery, node.row - 1, node.col, node.cost, node,
-                                 node.patients_position)
-        return cell_move(node_to_expand, node, map_operator)
-    return None
-
-
-def move_down(node, map_operator):
-    if node.row + 1 < len(input_map):
-        node_to_expand = Node(node.c, node.n, node.battery, node.row + 1, node.col, node.cost, node,
-                                 node.patients_position)
-        return cell_move(node_to_expand, node, map_operator)
-    return None
-
-
-def expand(node):
-    return [move_right(node, input_map, patients_positions), move_left(node, input_map, patients_positions),
-            move_up(node, input_map, patients_positions), move_down(node, input_map, patients_positions)]
+# def move_right(node, map_operator):
+#     if node.col + 1 < len(input_map[0]):
+#         node_to_expand = Node(node.c, node.n, node.battery, node.row, node.col + 1, node.cost, node, node.patients_position)
+#         return cell_move(node_to_expand, node, map_operator)
+#     return None
+#
+#
+# def move_left(node, map_operator):
+#     if node.col - 1 >= 0:
+#         node_to_expand = Node(node.c, node.n, node.battery, node.row, node.col - 1, node.cost, node,
+#                                  node.patients_position)
+#         return cell_move(node_to_expand, node, map_operator)
+#     return None
+#
+#
+# def move_up(node, map_operator):
+#     if node.row - 1 >= 0:
+#         node_to_expand = Node(node.c, node.n, node.battery, node.row - 1, node.col, node.cost, node,
+#                                  node.patients_position)
+#         return cell_move(node_to_expand, node, map_operator)
+#     return None
+#
+#
+# def move_down(node, map_operator):
+#     if node.row + 1 < len(input_map):
+#         node_to_expand = Node(node.c, node.n, node.battery, node.row + 1, node.col, node.cost, node,
+#                                  node.patients_position)
+#         return cell_move(node_to_expand, node, map_operator)
+#     return None
 
 
 # h = HashMap(5)
@@ -430,7 +437,7 @@ file_to_read = sys.argv[1]
 heuristic_chosen = int(sys.argv[2])
 number_patients_infectious = 0
 
-input_map, patients_positions, relevant_pos = read_file(file_to_read)
+patients_positions, relevant_pos = read_file(file_to_read)
 initial_patients = len(patients_positions)
 
 parking_square = relevant_pos.parking_pos
