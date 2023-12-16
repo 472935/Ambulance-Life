@@ -48,16 +48,14 @@ def read_file(filename):
 
 
 def write_ouput(filename, map_to_search, solution_path):
-    file = open(filename, 'w')
-    sys.stdout = file
-    if solution_path == "No path possible":
-        print(solution_path)
-        file.close()
-        return
-    for i in range(len(solution_path),0,-1):
-        print("(" + str(solution_path[i-1].row) + "," + str(solution_path[i-1].col) + "):" + str(map_to_search[solution_path[i-1].row][solution_path[i-1].col]) + ":" + str(solution_path[i-1].battery))
-    sys.stdout = sys.__stdout__
-    file.close()
+    with open(filename, 'w') as f:
+        if solution_path == "No path possible":
+            print(solution_path)
+            f.close()
+            return
+        for i in range(len(solution_path),0,-1):
+            print("(" + str(solution_path[i-1].row) + "," + str(solution_path[i-1].col) + "):" + str(map_to_search[solution_path[i-1].row][solution_path[i-1].col]) + ":" + str(solution_path[i-1].battery), file = f)
+
 
 
 class Bucket:
@@ -105,6 +103,11 @@ def heuristic1(node, relevant_locations):
         return manhattan_distance(node, relevant_locations.cn_pos)
 
     return manhattan_distance(node, relevant_locations.parking_pos)
+
+def heuristic2(node, relevant_locations):
+    #return 0
+
+    return len(node.patients_position) + manhattan_distance(node, relevant_locations.parking_pos)
 
 
 class Bucket_Container:
@@ -414,7 +417,7 @@ initial_patients = len(patients_positions)
 parking_square = relevant_pos.parking_pos
 
 initial_state = Node(0, 0, 50, parking_square[0], parking_square[1], 0, None, patients_positions)
-final_state = Node(0, 0, 50, parking_square[0], parking_square[1], 0, None, [None for _ in range(initial_patients)])
+final_state = Node(0, 0, 50, parking_square[0], parking_square[1], 0, None, [])
 
 open_map = HashMap(100)
 closed_map = HashMap(100)
