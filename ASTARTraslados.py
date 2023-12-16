@@ -210,13 +210,7 @@ class Bucket_Container:
             return None
 
         node = self.buckets[self.min_value].extract()
-        # if self.buckets[self.min_value].isempty():
-        #     for i in range(self.min_value + 1, self.size):
-        #         if not self.buckets[i].isempty():
-        #             self.min_value = i
-        #             return node
-        #
-        #     self.min_value = 999999999
+
         self.update_min_value()
         return node
 
