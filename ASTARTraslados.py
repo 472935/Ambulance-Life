@@ -112,7 +112,7 @@ def heuristic1(node, relevant_locations):
     return manhattan_distance(node, relevant_locations.parking_pos)
 
 def heuristic2(node, relevant_locations):
-    if len(node.patients_position) == 0 and node.c == 0 and node.n == 0:
+    if len(node.patients_position) == 0:
         return manhattan_distance(node, relevant_locations.parking_pos)
     max_dist = manhattan_distance(node,node.patients_position[0])
     for position in node.patients_position:
@@ -122,7 +122,6 @@ def heuristic2(node, relevant_locations):
     return max_dist
 
 def heuristic3(node, relevant_locations):
-    distance_to_c = 100
     sum = 0
     if node.c > 0:
         return manhattan_distance(node, relevant_locations.cc_pos)
@@ -158,12 +157,6 @@ def heuristic4(node, relevant_locations):
         minimums = get_min_distance(pos, positions_vector)
         pos = minimums[1]
         sum += minimums[0]
-
-    if node.c > 0:
-        sum + distance(pos, relevant_locations.cc_pos)
-
-    elif node.n > 0:
-        sum + distance(pos, relevant_locations.cn_pos)
 
     return sum + distance(pos, relevant_locations.parking_pos)
 
