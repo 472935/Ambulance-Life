@@ -107,8 +107,10 @@ def heuristic1(node, relevant_locations):
 def heuristic2(node, relevant_locations):
     #return 0
 
-    return len(node.patients_position) + manhattan_distance(node, relevant_locations.parking_pos)
+    return 2**len(node.patients_position) + manhattan_distance(node, relevant_locations.parking_pos) + 3**(node.n + node.c)
 
+def used_heuristic(node, relevant_locations):
+    return heuristic2(node,relevant_locations)
 
 class Bucket_Container:
     def __init__(self, initial_size):
@@ -120,7 +122,7 @@ class Bucket_Container:
         self.min_value = 999999999  # Start with the arbitrary super large value
 
     def insert(self, node, r_v):
-        f_val = node.cost + heuristic1(node, r_v)
+        f_val = node.cost + used_heuristic(node, r_v)
 
         if f_val < 0:
             raise Exception('Negative f_value obtained')
@@ -161,7 +163,7 @@ class Bucket_Container:
         return node
 
     def remove(self, node, r_v):
-        f_val = node.cost + heuristic1(node, r_v)
+        f_val = node.cost + used_heuristic(node, r_v)
 
         if f_val >= self.size:
             raise Exception('Node to remove is out of the range of the bucket container')
@@ -277,9 +279,10 @@ def a_star(open_map: HashMap, closed_map: HashMap, buckets: Bucket_Container, st
             return "No path possible"
 
         open_map.remove(best_node)
+        closed_map.add_node(best_node)
 
         # print("Battery:",best_node.battery,"Cost:",best_node.cost, "Total patients:", best_node.patients_position)
-        #print(heuristic1(best_node, r_v) + best_node.cost, best_node.patients_position)
+        print(used_heuristic(best_node, r_v) + best_node.cost, best_node.patients_position, best_node)
         #print(best_node.cost)
 
         if best_node in goal_nodes:
