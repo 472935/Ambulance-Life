@@ -47,7 +47,7 @@ def read_file(filename):
     return patients_positions_map, Relevant_Locations(p_value, cn_value, cc_value, mapa)
 
 
-def write_ouput(filename, map_to_search, solution_path,total_time):
+def write_ouput(filename, map_to_search, solution_path,total_time, expanded_nodes):
     with open(filename + ".output", 'w') as f:
         if solution_path == "No path possible":
             print(solution_path)
@@ -60,6 +60,7 @@ def write_ouput(filename, map_to_search, solution_path,total_time):
         print("Total time: " + str(total_time), file = f)
         print("Total cost: " + str(solution_path[0].cost), file = f)
         print("Plan length: " + str(len(solution_path)), file = f)
+        print("Expanded nodes: " + str(expanded_nodes), file = f)
     f.close()
 
 
@@ -487,4 +488,4 @@ path, expanded_nodes = a_star(open_map, closed_map, buckets, initial_state, [fin
 
 print("Camino")
 end = time.time()
-write_ouput(file_to_read[:-4] + "-" + str(heuristic_chosen), relevant_pos.mapa, path, end-begin)
+write_ouput(file_to_read[:-4] + "-" + str(heuristic_chosen), relevant_pos.mapa, path, end-begin, expanded_nodes)
