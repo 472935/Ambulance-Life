@@ -276,7 +276,7 @@ def a_star(open_map: HashMap, closed_map: HashMap, buckets: Bucket_Container, st
         open_map.remove(best_node)
 
         # print("Battery:",best_node.battery,"Cost:",best_node.cost, "Total patients:", best_node.patients_position)
-        print(heuristic1(best_node, r_v) + best_node.cost, best_node.patients_position)
+        #print(heuristic1(best_node, r_v) + best_node.cost, best_node.patients_position)
         #print(best_node.cost)
 
         if best_node in goal_nodes:
@@ -321,7 +321,7 @@ def cell_move(node, node_parent, r_v: Relevant_Locations):
         patients_positions_new = node.patients_position.copy()
         for i in range(len(patients_positions_new)):
             if patients_positions_new[i] == [node.row, node.col]:
-                patients_positions_new[i] = None
+                patients_positions_new.pop(i)
                 break
         gen_node = Node(node.c, node.n + 1,
                     node.battery - 1, node.row, node.col,
@@ -335,7 +335,7 @@ def cell_move(node, node_parent, r_v: Relevant_Locations):
         patients_positions_new = node.patients_position.copy()
         for i in range(len(patients_positions_new)):
             if patients_positions_new[i] == [node.row, node.col]:
-                patients_positions_new[i] = None
+                patients_positions_new.pop(i)
                 break
         gen_node = Node(node.c + 1, node.n,
                     node.battery - 1, node.row, node.col,
@@ -361,7 +361,8 @@ def cell_move(node, node_parent, r_v: Relevant_Locations):
         gen_node = Node(node.c, node.n,
                     node.battery - r_v.mapa[node.row][node.col], node.row, node.col,
                     node.cost + r_v.mapa[node.row][node.col], node_parent, node.patients_position)
-    if type(gen_node) is Node and manhattan_distance(gen_node, r_v.parking_pos):
+
+    if type(gen_node) is Node and manhattan_distance(gen_node, r_v.parking_pos) <= gen_node.battery:
         return gen_node
 
 def get_movement(node, r_v: Relevant_Locations):
@@ -374,36 +375,6 @@ def get_movement(node, r_v: Relevant_Locations):
                 gen_nodes.append(processed_node)
 
     return gen_nodes
-
-# def move_right(node, map_operator):
-#     if node.col + 1 < len(input_map[0]):
-#         node_to_expand = Node(node.c, node.n, node.battery, node.row, node.col + 1, node.cost, node, node.patients_position)
-#         return cell_move(node_to_expand, node, map_operator)
-#     return None
-#
-#
-# def move_left(node, map_operator):
-#     if node.col - 1 >= 0:
-#         node_to_expand = Node(node.c, node.n, node.battery, node.row, node.col - 1, node.cost, node,
-#                                  node.patients_position)
-#         return cell_move(node_to_expand, node, map_operator)
-#     return None
-#
-#
-# def move_up(node, map_operator):
-#     if node.row - 1 >= 0:
-#         node_to_expand = Node(node.c, node.n, node.battery, node.row - 1, node.col, node.cost, node,
-#                                  node.patients_position)
-#         return cell_move(node_to_expand, node, map_operator)
-#     return None
-#
-#
-# def move_down(node, map_operator):
-#     if node.row + 1 < len(input_map):
-#         node_to_expand = Node(node.c, node.n, node.battery, node.row + 1, node.col, node.cost, node,
-#                                  node.patients_position)
-#         return cell_move(node_to_expand, node, map_operator)
-#     return None
 
 
 # h = HashMap(5)
@@ -452,5 +423,5 @@ buckets = Bucket_Container(100)
 path = a_star(open_map, closed_map, buckets, initial_state, [final_state], relevant_pos)
 
 print("Camino")
-write_ouput(file_to_read[:-4] + "-" + str(heuristic_chosen) + ".output", input_map, path)
+write_ouput(file_to_read[:-4] + "-" + str(heuristic_chosen) + ".output", relevant_pos.mapa, path)
 print("LOlo")
