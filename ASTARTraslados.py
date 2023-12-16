@@ -384,7 +384,7 @@ def cell_move(node, node_parent, r_v: Relevant_Locations):
     if r_v.mapa[node.row][node.col] == 'X' or node.battery == 0 or node.check_backtrack():
         return None
     # If we find an N patient we add 1 to the N patients in the van, 1 to the cost + heuristic value and remove the patient from the patients list
-    elif r_v.mapa[node.row][node.col] == 'N' and [node.row, node.col] in node.patients_position and node.c == 0 and node.c + node.n <=10:
+    elif r_v.mapa[node.row][node.col] == 'N' and [node.row, node.col] in node.patients_position and node.c == 0 and node.c + node.n<10:
         # This can be changed to list of list with index being the column of a patient
         patients_positions_new = node.patients_position.copy()
         for i in range(len(patients_positions_new)):
@@ -399,7 +399,7 @@ def cell_move(node, node_parent, r_v: Relevant_Locations):
                     node.battery - 1, node.row, node.col,
                     node.cost + 1, node_parent, node.patients_position)
     # Same as N patient but we add 1 to the C patients in the van
-    elif r_v.mapa[node.row][node.col] == 'C' and [node.row, node.col] in node.patients_position and node.n <= 8 and node.c <= 2 and node.c + node.n <=10:
+    elif r_v.mapa[node.row][node.col] == 'C' and [node.row, node.col] in node.patients_position and node.n <= 8 and node.c < 2 and node.c + node.n < 10:
         patients_positions_new = node.patients_position.copy()
         for i in range(len(patients_positions_new)):
             if patients_positions_new[i] == [node.row, node.col]:
