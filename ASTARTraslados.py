@@ -94,6 +94,8 @@ class Bucket:
 def manhattan_distance(node, pos):
     return abs(node.row - pos[0]) + abs(node.col - pos[1])
 
+def distance(position1,position2):
+    return abs(position1[0] - position2[0]) + abs(position1[1] - position2[1])
 
 def heuristic1(node, relevant_locations):
     #return 0
@@ -114,8 +116,50 @@ def heuristic2(node, relevant_locations):
 
     return 2**len(node.patients_position) + manhattan_distance(node, relevant_locations.parking_pos) + 3**(node.n + node.c)
 
+def heuristic3(node, relevant_locations):
+    distance_to_c = 100
+    sum = 0
+    if node.c > 0:
+        return manhattan_distance(node, relevant_locations.cc_pos)
+    for i in range(len(node.patients_position)):
+        for j in range(len(node.patients_position)):
+            if i != j:
+                sum += distance(node.patients_position[i], node.patients_position[j])
+    #return 0
+    return sum
+
+def get_min_distance(pos, positions_vector):
+    if len(positions_vector) == 0:
+        return None, positions_vector
+
+    min_dist = distance(pos, positions_vector[0])
+    min_index = 0
+    for i in range(1, len(positions_vector)):
+        new_dist = distance(pos, positions_vector[i])
+        if new_dist < min_dist:
+            min_index = i
+            min_dist = new_dist
+
+    return min_dist, positions_vector.pop(min_index)
+
+def heuristic4(node, relevant_locations):
+    positions_vector = node.patients_position.copy()
+    sum = 0
+
+    if node.c > 0:
+        return manhattan_distance(node, relevant_locations.cc_pos)
+
+    pos = [node.row, node.col]
+    for i in range(len(positions_vector)):
+        minimums = get_min_distance(pos, positions_vector)
+        pos = minimums[1]
+        sum += minimums[0]
+
+    return sum
+
+
 def used_heuristic(node, relevant_locations):
-    return heuristic1(node,relevant_locations)
+    return heuristic3(node,relevant_locations)
 
 class Bucket_Container:
     def __init__(self, initial_size):
@@ -300,7 +344,7 @@ def a_star(open_map: HashMap, closed_map: HashMap, buckets: Bucket_Container, st
         closed_map.add_node(best_node)
 
         # print("Battery:",best_node.battery,"Cost:",best_node.cost, "Total patients:", best_node.patients_position)
-        #print(used_heuristic(best_node, r_v) + best_node.cost, best_node.patients_position, best_node, best_node.cost)
+        print(used_heuristic(best_node, r_v) + best_node.cost, best_node.patients_position, best_node, best_node.cost)
         #print(best_node.cost)
 
         if best_node in goal_nodes:
