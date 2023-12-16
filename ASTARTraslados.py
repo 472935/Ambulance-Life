@@ -1,6 +1,6 @@
 import re
 import sys
-
+import time
 heuristic_chosen = 0
 
 
@@ -47,15 +47,20 @@ def read_file(filename):
     return patients_positions_map, Relevant_Locations(p_value, cn_value, cc_value, mapa)
 
 
-def write_ouput(filename, map_to_search, solution_path):
-    with open(filename, 'w') as f:
+def write_ouput(filename, map_to_search, solution_path,total_time):
+    with open(filename + ".output", 'w') as f:
         if solution_path == "No path possible":
             print(solution_path)
             f.close()
             return
         for i in range(len(solution_path),0,-1):
             print("(" + str(solution_path[i-1].row) + "," + str(solution_path[i-1].col) + "):" + str(map_to_search[solution_path[i-1].row][solution_path[i-1].col]) + ":" + str(solution_path[i-1].battery), file = f)
-
+    f.close()
+    with open(filename + ".stat", 'w') as f:
+        print("Total time: " + str(total_time), file = f)
+        print("Total cost: " + str(solution_path[0].cost), file = f)
+        print("Plan length: " + str(len(solution_path)), file = f)
+    f.close()
 
 
 class Bucket:
@@ -122,7 +127,7 @@ class Bucket_Container:
         self.min_value = 999999999  # Start with the arbitrary super large value
 
     def insert(self, node, r_v):
-        f_val = node.cost + used_heuristic(node, r_v)
+        f_val = node.cost + heuristic1(node, r_v)
 
         if f_val < 0:
             raise Exception('Negative f_value obtained')
@@ -163,7 +168,7 @@ class Bucket_Container:
         return node
 
     def remove(self, node, r_v):
-        f_val = node.cost + used_heuristic(node, r_v)
+        f_val = node.cost + heuristic1(node, r_v)
 
         if f_val >= self.size:
             raise Exception('Node to remove is out of the range of the bucket container')
@@ -279,15 +284,16 @@ def a_star(open_map: HashMap, closed_map: HashMap, buckets: Bucket_Container, st
             return "No path possible"
 
         open_map.remove(best_node)
+        #print("Cost: " + str(best_node.cost) + "patients: ")
+        #print(best_node.patients_position)
         closed_map.add_node(best_node)
 
         # print("Battery:",best_node.battery,"Cost:",best_node.cost, "Total patients:", best_node.patients_position)
-        print(used_heuristic(best_node, r_v) + best_node.cost, best_node.patients_position, best_node)
+        #print(heuristic1(best_node, r_v) + best_node.cost, best_node.patients_position)
         #print(best_node.cost)
 
         if best_node in goal_nodes:
             return best_node.path()
-
         generated_nodes = best_node.expand(r_v)
         for node in generated_nodes:
             found = closed_map.contains_node(node)
@@ -319,7 +325,7 @@ def a_star(open_map: HashMap, closed_map: HashMap, buckets: Bucket_Container, st
 def cell_move(node, node_parent, r_v: Relevant_Locations):
     gen_node = None
 
-    if r_v.mapa[node.row][node.col] == 'X' or node.battery == 0 or node.parent.parent is not None and node.check_backtrack():
+    if r_v.mapa[node.row][node.col] == 'X' or node.battery == 0 or (node.parent.parent is not None and node.check_backtrack()):
         return None
     # If we find an N patient we add 1 to the N patients in the van, 1 to the cost + heuristic value and remove the patient from the patients list
     elif r_v.mapa[node.row][node.col] == 'N' and [node.row, node.col] in node.patients_position and node.c == 0 and node.c + node.n <=10:
@@ -409,7 +415,7 @@ def get_movement(node, r_v: Relevant_Locations):
 # b.insert(n)
 # a = b.extract()
 # c = b.extract()
-
+begin = time.time()
 file_to_read = sys.argv[1]
 heuristic_chosen = int(sys.argv[2])
 number_patients_infectious = 0
@@ -422,12 +428,11 @@ parking_square = relevant_pos.parking_pos
 initial_state = Node(0, 0, 50, parking_square[0], parking_square[1], 0, None, patients_positions)
 final_state = Node(0, 0, 50, parking_square[0], parking_square[1], 0, None, [])
 
-open_map = HashMap(100)
-closed_map = HashMap(100)
-buckets = Bucket_Container(100)
+open_map = HashMap(1000)
+closed_map = HashMap(1000)
+buckets = Bucket_Container(1000)
 
 path = a_star(open_map, closed_map, buckets, initial_state, [final_state], relevant_pos)
-
 print("Camino")
-write_ouput(file_to_read[:-4] + "-" + str(heuristic_chosen) + ".output", relevant_pos.mapa, path)
-print("LOlo")
+end = time.time()
+write_ouput(file_to_read[:-4] + "-" + str(heuristic_chosen), relevant_pos.mapa, path, end-begin)
