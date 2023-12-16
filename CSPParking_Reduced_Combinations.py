@@ -1,5 +1,3 @@
-from typing import Tuple
-from typing import List
 import sys
 import re
 from constraint import *
@@ -7,7 +5,6 @@ import csv
 
 m = 0
 n = 0
-
 
 def read_file(file_name):
     with open(file_name) as file:
@@ -40,22 +37,6 @@ def read_file(file_name):
             ambulance_vect.append(ambulance)
 
     return [m, n], chargers_vect, ambulance_vect
-
-    # file_input = open(file_name, "r")
-    # # read rows and columns
-    # return_dimensions = file_input.readline()
-    # # read electrical connection location
-    # return_electrical_connection = file_input.readline()
-    # return_ambulances = []
-    #
-    # while True:
-    #     # read the parking lot
-    #     return_ambulances.append(file_input.readline())
-    #     if return_ambulances[-1] == '':
-    #         return_ambulances.pop()
-    #         break
-    # file_input.close()
-    # return return_dimensions, return_electrical_connection, return_ambulances
 
 
 def write_file(file_name: str, solution_to_write: list, solution_num: int):

@@ -98,7 +98,6 @@ def distance(position1,position2):
     return abs(position1[0] - position2[0]) + abs(position1[1] - position2[1])
 
 def heuristic1(node, relevant_locations):
-    #return 0
     if node.c > 0:
         return manhattan_distance(node, relevant_locations.cc_pos)
 
@@ -112,9 +111,14 @@ def heuristic1(node, relevant_locations):
     return manhattan_distance(node, relevant_locations.parking_pos)
 
 def heuristic2(node, relevant_locations):
-    #return 0
-
-    return 2**len(node.patients_position) + manhattan_distance(node, relevant_locations.parking_pos) + 3**(node.n + node.c)
+    if len(node.patients_position) == 0:
+        return manhattan_distance(node, relevant_locations.parking_pos)
+    max_dist = manhattan_distance(node,node.patients_position[0])
+    for position in node.patients_position:
+        new_dist = manhattan_distance(node, position)
+        if new_dist > max_dist:
+            max_dist = new_dist
+    return max_dist
 
 def heuristic3(node, relevant_locations):
     distance_to_c = 100
@@ -125,7 +129,6 @@ def heuristic3(node, relevant_locations):
         for j in range(len(node.patients_position)):
             if i != j:
                 sum += distance(node.patients_position[i], node.patients_position[j])
-    #return 0
     return sum
 
 def get_min_distance(pos, positions_vector):
@@ -155,20 +158,26 @@ def heuristic4(node, relevant_locations):
         pos = minimums[1]
         sum += minimums[0]
 
-    return sum
+    if node.c > 0:
+        sum + distance(pos, relevant_locations.cc_pos)
+
+    if node.n > 0:
+        sum + distance(pos, relevant_locations.cn_pos)
+
+    return sum + distance(pos, relevant_locations.parking_pos)
 
 
-def heuristic5(node, relevant_locations):
-    min = 0
-    for i in range(len(node.patients_position)):
-        for j in range(len(node.patients_position)):
-            if i != j:
-                return manhattan_distance(node, node.patients_position[i]) + manhattan_distance(node, node.patients_position[j])
 
-    return sum
 
-def used_heuristic(node, relevant_locations):
-    return heuristic2(node,relevant_locations)
+def heuristic(node, relevant_locations):
+    if heuristic_chosen == 1:
+        return heuristic1(node, relevant_locations)
+    elif heuristic_chosen == 2:
+        return heuristic2(node, relevant_locations)
+    elif heuristic_chosen == 3:
+        return heuristic3(node, relevant_locations)
+    elif heuristic_chosen == 4:
+        return heuristic4(node, relevant_locations)
 
 class Bucket_Container:
     def __init__(self, initial_size):
@@ -180,7 +189,7 @@ class Bucket_Container:
         self.min_value = 999999999  # Start with the arbitrary super large value
 
     def insert(self, node, r_v):
-        f_val = node.cost + used_heuristic(node, r_v)
+        f_val = node.cost + heuristic(node, r_v)
 
         if f_val < 0:
             raise Exception('Negative f_value obtained')
@@ -215,7 +224,7 @@ class Bucket_Container:
         return node
 
     def remove(self, node, r_v):
-        f_val = node.cost + used_heuristic(node, r_v)
+        f_val = node.cost + heuristic(node, r_v)
 
         if f_val >= self.size:
             raise Exception('Node to remove is out of the range of the bucket container')
@@ -350,7 +359,7 @@ def a_star(open_map: HashMap, closed_map: HashMap, buckets: Bucket_Container, st
         closed_map.add_node(best_node)
 
         # print("Battery:",best_node.battery,"Cost:",best_node.cost, "Total patients:", best_node.patients_position)
-        print(used_heuristic(best_node, r_v) + best_node.cost, best_node.patients_position, best_node, best_node.cost)
+        print(heuristic(best_node, r_v) + best_node.cost, best_node.patients_position, best_node, best_node.cost)
         #print(best_node.cost)
 
         if best_node in goal_nodes:
